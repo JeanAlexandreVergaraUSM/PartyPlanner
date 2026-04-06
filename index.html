@@ -2030,10 +2030,323 @@ input[type="date"]::-webkit-datetime-edit-year-field {
     
     
     
+    .party-members-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+    
+    
+    
+    .party-member-card {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(8px);
+  padding: 1rem;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all .25s ease;
+}
+
+    
+    
+    
+    .party-member-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+}
+
+    
+    
+    
+    .party-member-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.4rem;
+  color: white;
+  font-weight: bold;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+    
+    
+    
+    .party-member-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+    
+    
+    
+    .party-member-info code {
+  display: none;
+}
+
+    
+    
+    
+    .kick-btn {
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  background: rgba(255, 80, 80, 0.25);
+  border: 1px solid rgba(255, 80, 80, 0.5);
+  border-radius: 6px;
+  color: #ff7070;
+  cursor: pointer;
+  margin-left: 10px;
+  transition: 0.15s;
+}
+
+    
+    
+    
+    .kick-btn:hover {
+  background: rgba(255, 80, 80, 0.45);
+  color: white;
+}
+
+    
+    
+    
+    .host-badge {
+  margin-left: 10px;
+  background: linear-gradient(135deg, #ffffff, #fda085);
+  color: #111;
+  font-weight: 700;
+  font-size: 0.72rem;
+  padding: 3px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.25);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
+
+    
+    
+    
+    .transfer-btn {
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  background: rgba(255, 200, 0, 0.25);
+  border: 1px solid rgba(255, 200, 0, 0.6);
+  border-radius: 6px;
+  color: #ffd700;
+  cursor: pointer;
+  margin-left: 10px;
+  transition: 0.15s;
+}
+
+    
+    
+    
+    .transfer-btn:hover {
+  background: rgba(255, 200, 0, 0.45);
+  color: white;
+}
+
+    
+    
+    
+    .conn-dot {
+  display:inline-block;
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  margin-right:6px;
+}
+
+    
+    
+    
+    .conn-dot.on {
+  background:#10b981;      /* VERDE */
+  box-shadow:0 0 6px #10b981;
+}
+
+    
+    
+    
+    .conn-dot.off {
+  background:#555;
+  opacity:0.6;
+}
+
+    
+    
+    
+    .conn-dot.on {
+  background:#10b981;
+  box-shadow:0 0 6px #10b981;
+  animation: pulseOnline 1.4s infinite ease-in-out;
+}
+
+    
+    
+    
+    @keyframes pulseOnline {
+  0%   { transform: scale(.9); opacity:.8; }
+  50%  { transform: scale(1.15); opacity:1; }
+  100% { transform: scale(.9); opacity:.8; }
+}
+
+    
+    
+    
+    /* Quitar subrayado a los tabs (links) */
+
+    
+    
+    
+    .nav a.nav-tab,
+.nav a.nav-tab:visited,
+.nav a.nav-tab:hover,
+.nav a.nav-tab:focus,
+.nav a.nav-tab:active{
+  text-decoration: none !important;
+  color: inherit; /* opcional: evita colores típicos de links */
+}
+
+    
+    
+    
+    /* ===== Simulador: chips rectangulares bonitos ===== */
+
+    
+    
+    
+    #simPaletteHost{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  align-items:center;
+}
+
+    
+    
+    
+    /* contenedor */
+
+    
+    
+    
+    #simPaletteHost .palette-rect{
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+
+  height:48px;
+  padding:0 14px;
+
+  border-radius:14px !important;
+  border:1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.03);
+
+  box-shadow: 0 10px 22px rgba(0,0,0,.18);
+  cursor:grab;
+
+  user-select:none;
+  -webkit-user-select:none;
+
+  font-weight:800;
+  font-size:13px;
+  line-height:1.2;
+
+  max-width: 260px;
+}
+
+    
+    
+    
+    /* texto */
+
+    
+    
+    
+    #simPaletteHost .palette-rect .label{
+  min-width:0;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  opacity:.95;
+}
+
+    
+    
+    
+    /* botón flecha */
+
+    
+    
+    
+    #simPaletteHost .palette-rect .add-par{
+  margin-left:10px;
+  height:30px;
+  width:34px;
+
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.06);
+
+  font-weight:1000;
+  font-size:16px;
+  line-height:1;
+
+  cursor:pointer;
+}
+
+    
+    
+    
+    /* hover suave */
+
+    
+    
+    
+    #simPaletteHost .palette-rect:hover{
+  transform: translateY(-1px);
+  filter: brightness(1.03);
+}
+
+    
+    
+    
+    #simPaletteHost .palette-rect:active{
+  transform: translateY(0px);
+}
+
+    
+    
+    
+    /* evita que algo global los haga "píldora 9999px" */
+
+    
+    
+    
+    #simPaletteHost .palette-rect{ border-radius:14px !important; }
+
+    
+    
+    
     /*termina*/
 
   </style>
-  <script type="module" crossorigin src="./assets/index-Cw070em5.js"></script>
+  <script type="module" crossorigin src="./assets/index-Nb9GWsMi.js"></script>
   <link rel="stylesheet" crossorigin href="./assets/index-G8tXkEf4.css">
 </head>
 
@@ -2045,17 +2358,16 @@ input[type="date"]::-webkit-datetime-edit-year-field {
     <div class="brand">PartyPlanner</div>
 
     <nav class="nav nav-tabs">
-      <button class="nav-tab tab active" data-route="#/perfil">Perfil</button>
-      <button class="nav-tab tab" data-route="#/semestres">Semestres</button>
-      <button class="nav-tab tab" data-route="#/horario">Horario</button>
-      <button class="nav-tab tab" data-route="#/notas">Notas</button>
-      <button class="nav-tab tab" data-route="#/malla">Malla</button>
-      <button class="nav-tab tab" data-route="#/calendario">Calendario</button>
-      <button class="nav-tab tab" data-route="#/asistencia">Asistencia</button>
-      <button class="nav-tab tab" data-route="#/party">Party</button> 
-      <button class="nav-tab tab" data-route="#/ayuda">Ayuda</button> 
-      <nav class="nav nav-tabs"> </nav>
-    </nav>
+  <a class="nav-tab tab active" href="#/perfil" data-route="#/perfil">Perfil</a>
+  <a class="nav-tab tab" href="#/semestres" data-route="#/semestres">Semestres</a>
+  <a class="nav-tab tab" href="#/horario" data-route="#/horario">Horario</a>
+  <a class="nav-tab tab" href="#/notas" data-route="#/notas">Notas</a>
+  <a class="nav-tab tab" href="#/malla" data-route="#/malla">Malla</a>
+  <a class="nav-tab tab" href="#/calendario" data-route="#/calendario">Calendario</a>
+  <a class="nav-tab tab" href="#/asistencia" data-route="#/asistencia">Asistencia</a>
+  <a class="nav-tab tab" href="#/party" data-route="#/party">Party</a>
+<!-- <a class="nav-tab tab" href="#/ayuda" data-route="#/ayuda">Ayuda</a> -->
+</nav>
 
     <div class="auth-area">
       <button id="signInBtn" class="btn btn-secondary" style="padding:0.4rem 0.8rem">
@@ -2265,10 +2577,11 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   <!-- Subtabs -->
   <div class="subtabs" style="display:flex;gap:8px;margin-bottom:12px;">
     <button id="subtabPropio" class="btn btn-secondary active">Mi horario</button>
-    <button id="subtabCompartido" class="btn btn-secondary" aria-disabled="true">
-  Horario de mi duo
+    <button id="subtabCompartido" class="btn btn-secondary">
+  Horario de mi party
 </button>
- <button id="subtabCombinado" class="btn btn-secondary hidden">
+
+<button id="subtabCombinado" class="btn btn-secondary">
   Horario compartido
 </button>
   </div>
@@ -2300,7 +2613,7 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
     <h2 style="margin:0">📊 Mis Notas</h2>
     <button id="gr-togglePartner" class="btn btn-secondary" aria-pressed="false">
-      Notas de mi duo
+      Notas de mi party
     </button>
   </div>
 
@@ -2597,6 +2910,7 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   <div class="party-card">
     <h3>🎯 Modo Colaborativo (Party)</h3>
     <p class="muted">Crea una party y comparte el ID…</p>
+    
     <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;">
       <button id="createPairBtn" class="btn">✨ Crear Party</button>
       <button id="copyInviteBtn" class="btn btn-secondary" disabled>📋 Copiar ID</button>
@@ -2604,6 +2918,9 @@ input[type="date"]::-webkit-datetime-edit-year-field {
              style="flex:1;min-width:200px;background:rgba(255,255,255,.08);border:1px solid var(--border);padding:.7rem;border-radius:12px;color:white;">
       <button id="joinByCodeBtn" class="btn btn-secondary">Unirse</button>
       <button id="deletePairBtn" class="btn btn-secondary">Salir de party</button>
+      <button id="closePartyBtn" class="btn btn-secondary" style="background:#ef4444;border:1px solid #dc2626;">
+  ❌ Cerrar Party (host)
+</button>
     </div>
     <div style="margin-top:1rem">
       <b>ID actual:</b> <span id="pairId">—</span>
@@ -2611,6 +2928,24 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   </div>
 
   
+<!-- NUEVA SECCIÓN BONITA DE MIEMBROS -->
+  <div id="partyMembersSection" style="margin-top:2rem;">
+
+  <h3 class="party-members-title" 
+      style="margin-bottom:1rem; display:flex; align-items:center; gap:.6rem;">
+
+    👥 Miembros actuales
+    <span id="partyCount" 
+          style="opacity:.8; font-size:0.9rem; background:rgba(255,255,255,0.1);
+          padding:4px 10px; border-radius:8px;">
+      0/5
+    </span>
+
+  </h3>
+
+  <div id="partyMembersList" class="party-members-grid"></div>
+</div>
+
 </section>
 
 
@@ -2813,6 +3148,33 @@ input[type="date"]::-webkit-datetime-edit-year-field {
     </div>
   </div>
 </div>
+
+<!-- Modal para salir de la party -->
+<div id="leavePartyModal" class="modal">
+  <div class="modal-content" style="max-width:380px;text-align:center;">
+    <h3>¿Salir de la party?</h3>
+    <p class="muted">Perderás acceso a la party y sus miembros. ¿Seguro?</p>
+
+    <div style="margin-top:1.2rem;display:flex;gap:1rem;justify-content:center;">
+      <button id="leavePartyConfirm" class="btn danger">Salir</button>
+      <button id="leavePartyCancel" class="btn btn-secondary">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para CERRAR COMPLETAMENTE la party (solo host) -->
+<div id="closePartyModal" class="modal">
+  <div class="modal-content" style="max-width:380px;text-align:center;">
+    <h3>¿Cerrar la party?</h3>
+    <p class="muted">Todos serán expulsados y la party será eliminada permanentemente.</p>
+
+    <div style="margin-top:1.2rem;display:flex;gap:1rem;justify-content:center;">
+      <button id="closePartyConfirm" class="btn danger">Cerrar</button>
+      <button id="closePartyCancel" class="btn btn-secondary">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 
 
 </body>
