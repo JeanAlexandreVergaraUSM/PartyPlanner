@@ -2343,10 +2343,233 @@ input[type="date"]::-webkit-datetime-edit-year-field {
     
     
     
+    /* ===== Exportar notas PDF ===== */
+
+    
+    
+    
+    .pdf-export-modal {
+  width: min(860px, 92vw);
+  max-width: 860px;
+  background: linear-gradient(180deg, rgba(14,16,40,.98), rgba(10,11,31,.98));
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 22px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.45);
+  padding: 28px;
+  color: #f4f6ff;
+  position: relative;
+  z-index: 1001;
+}
+
+    
+    
+    
+    .pdf-export-header {
+  margin-bottom: 18px;
+}
+
+    
+    
+    
+    .pdf-export-title {
+  margin: 0 0 8px;
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+    
+    
+    
+    .pdf-export-subtitle {
+  margin: 0;
+  color: rgba(255,255,255,.72);
+  font-size: 0.98rem;
+  line-height: 1.45;
+}
+
+    
+    
+    
+    .pdf-export-body {
+  display: grid;
+  gap: 20px;
+}
+
+    
+    
+    
+    .pdf-export-field {
+  display: grid;
+  gap: 10px;
+}
+
+    
+    
+    
+    .pdf-export-label {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #e9ecff;
+}
+
+    
+    
+    
+    .pdf-export-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+    
+    
+    
+    .pdf-export-select {
+  min-width: 180px;
+  max-width: 240px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.04);
+  color: #fff;
+  font-size: 1rem;
+  outline: none;
+}
+
+    
+    
+    
+    .pdf-export-select:focus {
+  border-color: rgba(99, 148, 255, .7);
+  box-shadow: 0 0 0 4px rgba(99,148,255,.14);
+}
+
+    
+    
+    
+    .pdf-export-semesters {
+  display: grid;
+  gap: 10px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.03);
+}
+
+    
+    
+    
+    .pdf-sem-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255,255,255,.025);
+  border: 1px solid transparent;
+  transition: .18s ease;
+  cursor: pointer;
+}
+
+    
+    
+    
+    .pdf-sem-item:hover {
+  background: rgba(255,255,255,.06);
+  border-color: rgba(255,255,255,.08);
+}
+
+    
+    
+    
+    .pdf-sem-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #5ea2ff;
+}
+
+    
+    
+    
+    .pdf-sem-item span {
+  font-size: 1rem;
+  color: #f3f5ff;
+}
+
+    
+    
+    
+    .pdf-export-secondary,
+.pdf-export-cancel,
+.pdf-export-confirm {
+  border: none;
+  border-radius: 14px;
+  padding: 12px 18px;
+  font-size: 0.98rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform .15s ease, opacity .15s ease, box-shadow .15s ease;
+}
+
+    
+    
+    
+    .pdf-export-secondary:hover,
+.pdf-export-cancel:hover,
+.pdf-export-confirm:hover {
+  transform: translateY(-1px);
+}
+
+    
+    
+    
+    .pdf-export-secondary {
+  background: rgba(255,255,255,.04);
+  color: #eef2ff;
+  border: 1px solid rgba(255,255,255,.08);
+}
+
+    
+    
+    
+    .pdf-export-cancel {
+  background: rgba(255,255,255,.03);
+  color: #eef2ff;
+  border: 1px solid rgba(255,255,255,.10);
+}
+
+    
+    
+    
+    .pdf-export-confirm {
+  background: linear-gradient(135deg, #63a6ff, #3c7dff);
+  color: white;
+  box-shadow: 0 8px 22px rgba(61,125,255,.28);
+}
+
+    
+    
+    
+    .pdf-export-footer {
+  margin-top: 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+    
+    
+    
     /*termina*/
 
   </style>
-  <script type="module" crossorigin src="./assets/index-HwI7gvoQ.js"></script>
+  <script type="module" crossorigin src="./assets/index-BstKoh2u.js"></script>
   <link rel="stylesheet" crossorigin href="./assets/index-G8tXkEf4.css">
 </head>
 
