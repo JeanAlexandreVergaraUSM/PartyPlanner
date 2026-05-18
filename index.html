@@ -2566,10 +2566,78 @@ input[type="date"]::-webkit-datetime-edit-year-field {
     
     
     
+    /* ===== Día actual en calendario ===== */
+
+    
+    
+    
+    .cal-cell.day.cal-today {
+  position: relative;
+  border: 1px solid rgba(250, 204, 21, .95) !important;
+  box-shadow:
+    0 0 0 2px rgba(250, 204, 21, .18),
+    0 0 24px rgba(250, 204, 21, .18);
+  background:
+    radial-gradient(circle at top right, rgba(250, 204, 21, .20), transparent 42%),
+    rgba(15, 23, 42, .88) !important;
+}
+
+    
+    
+    
+    .cal-cell.day.cal-today::after {
+  content: "";
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #facc15;
+  box-shadow: 0 0 14px rgba(250, 204, 21, .95);
+  pointer-events: none;
+}
+
+    
+    
+    
+    .cal-daytop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+    
+    
+    
+    .cal-cell.day.cal-today .cal-daynum {
+  color: #fde68a;
+  font-weight: 900;
+}
+
+    
+    
+    
+    .cal-today-badge {
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  padding: 4px 7px;
+  border-radius: 999px;
+  color: #111827;
+  background: #facc15;
+  box-shadow: 0 0 14px rgba(250, 204, 21, .35);
+}
+
+    
+    
+    
     /*termina*/
 
   </style>
-  <script type="module" crossorigin src="./assets/index-BstKoh2u.js"></script>
+  <script type="module" crossorigin src="./assets/index-Cmu5HZYD.js"></script>
   <link rel="stylesheet" crossorigin href="./assets/index-G8tXkEf4.css">
 </head>
 
