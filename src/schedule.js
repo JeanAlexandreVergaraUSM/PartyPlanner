@@ -3,7 +3,7 @@
   import { $, state } from './state.js';
   import { canViewPartyZone, privacyBlockedMessage } from './privacy.js';
   import { bindExportButtons } from './export.js';
-  import { collection, addDoc, onSnapshot, doc, deleteDoc, query, orderBy, getDocs, getDoc, updateDoc, where , setDoc} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+  import { collection, addDoc, onSnapshot, doc, deleteDoc, query, orderBy, getDocs, getDoc, updateDoc, where , setDoc} from 'firebase/firestore';
   let IN_SIM_MODAL = false;  let SIM_ALLOW_PERSIST = false;let SIM_SAVED_FULL = '';let SIM_SAVED_SNAPSHOT = '';let SIM_DIRTY = false;let SIM_TERM = '';let unsubMyCourses = null;let SIM_OPEN_SNAPSHOT = null;const partyScheduleCache = new Map(); const SIM_PARALLEL_DEFS = new Map();let SIM_COURSES = [];let SIM_ITEMS = [];const SELECTED_PARALLEL = new Map();let EDIT_BLOCKS_MODE = false; let SIM_SLOTS = null;let ALLOW_ADD_COURSE_UI = false; let myColor = '#22c55e';let partnerColor = '#ff69b4';let unsubPartnerProfile = null;let schedBooted = false;let unsubPartySched = null;let unsubPartyCourses = null;let unsubPartyProfile = null;let partyItems = [];let partyCourses = [];let partySlots = null;let partyUni = 'USM';let partyMemberProfileCache = {};const busyMembers = new Map(); const busyUnsubs  = new Map(); let busyRenderRAF = null;
   function takeSimSnapshot(){
     const defsObj = {};
@@ -2828,13 +2828,13 @@
           box-shadow:0 18px 60px rgba(0,0,0,.45);
           color:#fff;
         ">
-          <div style="font-weight:900; font-size:16px;">${title}</div>
-          <div style="opacity:.8; margin-top:8px; font-size:13.5px;">${message}</div>
+          <div style="font-weight:900; font-size:16px;">${escapeHtml(title)}</div>
+          <div style="opacity:.8; margin-top:8px; font-size:13.5px;">${escapeHtml(message)}</div>
 
           <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:16px; flex-wrap:wrap;">
-            <button id="triCancel" class="btn violet-outline" type="button">${cancelText}</button>
-            <button id="triDiscard" class="btn violet-outline" type="button">${discardText}</button>
-            <button id="triSave" class="btn violet" type="button">${saveText}</button>
+            <button id="triCancel" class="btn violet-outline" type="button">${escapeHtml(cancelText)}</button>
+            <button id="triDiscard" class="btn violet-outline" type="button">${escapeHtml(discardText)}</button>
+            <button id="triSave" class="btn violet" type="button">${escapeHtml(saveText)}</button>
           </div>
         </div>
       `;
@@ -3887,9 +3887,9 @@ return `
 
   return `
     <div class="placed pos-${pos} h-${h}"
-        title="${shown}${room ? ` · Sala: ${room}` : ''}"
+        title="${escapeHtml(title)}"
         style="background:${color}; border:1px solid rgba(0,0,0,0.25); margin:2px 0;">
-      <div class="placed-title" style="color:${text}; font-weight:600;">${shown}</div>
+      <div class="placed-title" style="color:${text}; font-weight:600;">${escapeHtml(shown)}</div>
     </div>
   `;
   }
@@ -4003,6 +4003,8 @@ if (!canSee) {
     opt0.textContent = '— seleccionar —';
     sel.appendChild(opt0);
     if (!state.pairOtherUid) return;
+
+    const byKey = new Map();
     const ref = collection(db, 'users', state.pairOtherUid, 'semesters');
     const snap = await getDocs(query(ref));
     if (myToken !== _lastPopulateToken) return;
@@ -4172,12 +4174,12 @@ if (!canSee) {
     bar.innerHTML = members.map(uid => {
       const p = partyMemberProfileCache[uid] || {};
       const name = p.name || (uid === state.currentUser?.uid ? 'Yo' : 'Usuario');
-      const color = p.color || '#64748b';
+      const color = isValidHex(p.color) ? p.color : '#64748b';
       const active = (uid === state.partyView.uid);
 
       return `
     <button class="party-chip btn ${active ? 'violet' : 'violet-outline'} ${active ? 'is-active' : ''}"
-      data-uid="${uid}"
+      data-uid="${escapeHtml(uid)}"
       style="
         display:flex;align-items:center;gap:8px;border-radius:999px;padding:8px 12px;
         ${active ? 'outline:2px solid rgba(255,255,255,.65); outline-offset:2px; box-shadow:0 0 0 3px rgba(124,58,237,.25);' : ''}
@@ -4901,7 +4903,7 @@ if (!canSee) {
         background:rgba(255,255,255,.04);
         border:1px solid rgba(255,255,255,.10);
       ">
-        <span style="width:14px;height:14px;border-radius:4px;background:${p.color};display:inline-block;"></span>
+        <span style="width:14px;height:14px;border-radius:4px;background:${isValidHex(p.color) ? p.color : '#64748b'};display:inline-block;"></span>
         <span style="font-weight:800">${escapeHtml(p.name)}</span>
       </div>
     `).join('');

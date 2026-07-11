@@ -1,29 +1,29 @@
 # Dependencias
 node_modules/
 
-# Build de Vite
+# Build
 dist/
 
-# Cachés
-.vite/
-node_modules/.vite/
-
-# Variables de entorno y claves
+# Variables locales
 .env
 .env.*
 !.env.example
 
-# Logs
+# Pruebas y cobertura
+coverage/
+playwright-report/
+test-results/
+
+# Firebase local y logs
+.firebase/
+firestore-debug.log
+firebase-debug.log
+ui-debug.log
+
+# Logs npm
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
-
-# Firebase local
-.firebase/
-firebase-debug.log
-firestore-debug.log
-ui-debug.log
 
 # Sistema operativo
 .DS_Store

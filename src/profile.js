@@ -1,7 +1,8 @@
 // js/profile.js
-import { db } from './firebase.js';
-import { doc, onSnapshot, updateDoc,setDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { db, persistentCacheEnabled, updateTrustedDevicePreference, clearLocalFirestoreCache } from './firebase.js';
+import { doc, onSnapshot, updateDoc,setDoc } from 'firebase/firestore';
 import { $, state, updateDebug } from './state.js';
+import { safeImageDataUrl, setLabeledText } from './security/html.js';
 
 let unsubProfile = null; // 👈 NUEVO
 
@@ -181,6 +182,11 @@ if (pfName && !pfName.dataset.bound) {
 }
 
   const pfBirthday = $('pfBirthday');
+  if (pfBirthday && !pfBirthday.dataset.inputGuardBound) {
+    pfBirthday.addEventListener('keydown', e => e.preventDefault());
+    pfBirthday.addEventListener('paste', e => e.preventDefault());
+    pfBirthday.dataset.inputGuardBound = '1';
+  }
   const pfUniversity = $('pfUniversity') || $('uniSel');   // soporta tu HTML
   const pfCustomUniWrap = $('pfCustomUniWrap');            // puede no existir (OK)
   const pfCustomUniversity = $('pfCustomUniversity');      // puede no existir (OK)
@@ -879,8 +885,9 @@ export function mountPartnerProfileCard() {
     const d = { ...(latestRoot?.data() || {}), ...(latestProf?.data() || {}) };
     const pav = $('pp-avatar');
     if (pav) {
-      if (d.avatarData) {
-        pav.style.backgroundImage = `url("${d.avatarData}")`;
+      const safeAvatarData = safeImageDataUrl(d.avatarData);
+      if (safeAvatarData) {
+        pav.style.backgroundImage = `url("${safeAvatarData}")`;
         pav.textContent = '';
       } else {
         pav.style.backgroundImage = 'none';
@@ -892,13 +899,12 @@ export function mountPartnerProfileCard() {
       }
     }
 
-    $('pp-name').innerHTML = `<b>Nombre:</b> ${d.name || '—'}`;
-    $('pp-uni').innerHTML = `<b>Universidad:</b> ${readUni(d)}`;
-    $('pp-career').innerHTML = `<b>Carrera:</b> ${readableCareer(d) || '—'}`;
-
-    $('pp-bday').innerHTML = `<b>Fecha de nacimiento:</b> ${prettyDMY(d.birthday)}`;
-    $('pp-email').innerHTML = `<b>Email universitario:</b> ${d.uniEmail || '—'}`;
-    $('pp-phone').innerHTML = `<b>Teléfono:</b> ${d.phone || '—'}`;
+    setLabeledText($('pp-name'), 'Nombre', d.name || '—');
+    setLabeledText($('pp-uni'), 'Universidad', readUni(d));
+    setLabeledText($('pp-career'), 'Carrera', readableCareer(d) || '—');
+    setLabeledText($('pp-bday'), 'Fecha de nacimiento', prettyDMY(d.birthday));
+    setLabeledText($('pp-email'), 'Email universitario', d.uniEmail || '—');
+    setLabeledText($('pp-phone'), 'Teléfono', d.phone || '—');
 
     const col =
       typeof d.favoriteColor === 'string' && /^#[0-9A-Fa-f]{6}$/.test(d.favoriteColor)
@@ -944,7 +950,12 @@ document.addEventListener('pair:ready', () => {
 
 
 // ========== Modales para "Otra universidad" y "Otra carrera" ==========
-document.addEventListener('DOMContentLoaded', () => {
+let profileCustomSelectorsBound = false;
+
+function bindProfileCustomSelectors(){
+  if (profileCustomSelectorsBound) return;
+  profileCustomSelectorsBound = true;
+
   // ----- Referencias -----
   const uniSel = document.getElementById('uniSel');
   const careerSel = document.getElementById('careerSel');
@@ -1073,4 +1084,68 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-});
+}
+
+
+function bindDeviceSecurityPreferences(){
+  const trustedChk = $('pfTrustedDevice');
+  const status = $('pfTrustedDeviceStatus');
+  const clearBtn = $('pfClearLocalCache');
+
+  if (!trustedChk || trustedChk.dataset.bound === '1') return;
+
+  const renderStatus = () => {
+    trustedChk.checked = !!persistentCacheEnabled;
+    if (status) {
+      status.textContent = persistentCacheEnabled
+        ? 'Modo confiable activo: Firestore usa caché persistente en este navegador.'
+        : 'Modo privado activo: Firestore usa caché en memoria y no conserva datos offline entre sesiones.';
+    }
+  };
+
+  trustedChk.addEventListener('change', () => {
+    const next = !!trustedChk.checked;
+    updateTrustedDevicePreference(next);
+
+    const msg = next
+      ? 'La caché persistente se activará al recargar PartyPlanner.'
+      : 'La caché persistente se desactivará al recargar. Puedes usar “Borrar caché local” para eliminar también los datos ya almacenados.';
+
+    if (status) status.textContent = msg;
+
+    setTimeout(() => {
+      location.reload();
+    }, 700);
+  });
+
+  clearBtn?.addEventListener('click', async () => {
+    const ok = confirm('¿Borrar la caché local de Firestore de este navegador? Los datos confirmados en la nube no se eliminan.');
+    if (!ok) return;
+
+    clearBtn.disabled = true;
+    if (status) status.textContent = 'Borrando caché local…';
+
+    try {
+      updateTrustedDevicePreference(false);
+      await clearLocalFirestoreCache();
+    } catch (err) {
+      console.error('clearLocalFirestoreCache', err);
+      clearBtn.disabled = false;
+      if (status) status.textContent = 'No se pudo borrar la caché local. Cierra otras pestañas de PartyPlanner e inténtalo nuevamente.';
+    }
+  });
+
+  trustedChk.dataset.bound = '1';
+  renderStatus();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    bindProfileCustomSelectors();
+    bindDeviceSecurityPreferences();
+  }, { once:true });
+} else {
+  bindProfileCustomSelectors();
+  bindDeviceSecurityPreferences();
+}
+

@@ -1,21 +1,21 @@
 // ai/tools.js
 // “Herramientas” deterministas conectadas a Firestore y tu state.
 
-import { db } from '../js/firebase.js';
-import { state, $ } from '../js/state.js';
-import { USM_SLOTS, MAYOR_SLOTS } from '../js/schedule.js';
-import * as grades from '../js/grades.js';
-import * as progreso from '../js/progreso.js';
-import * as semesters from '../js/semesters.js';
-import * as courses from '../js/courses.js';
-import * as calendar from '../js/calendar.js';
-import * as schedule from '../js/schedule.js';
-import * as exporter from '../js/export.js';
-import { getPrereqs } from '../js/malla.js';
+import { db } from '../firebase.js';
+import { state, $ } from '../state.js';
+import { USM_SLOTS, MAYOR_SLOTS } from '../schedule.js';
+import * as grades from '../grades.js';
+import * as progreso from '../progreso.js';
+import * as semesters from '../semesters.js';
+import * as courses from '../courses.js';
+import * as calendar from '../calendar.js';
+import * as schedule from '../schedule.js';
+import * as exporter from '../export.js';
+import { getPrereqs } from '../malla.js';
 
 import {
   collection, getDocs, addDoc, deleteDoc, doc
-} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+} from 'firebase/firestore';
 
 // ---------- helpers ----------
 function uniCodeFromReadable(r) {

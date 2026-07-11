@@ -2,24 +2,24 @@
 <html lang="es">
 <head>
 
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" defer></script>
-<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 
 
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' https://apis.google.com https://accounts.google.com https://www.google.com https://www.gstatic.com https://www.recaptcha.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://*.googleusercontent.com https://*.gstatic.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://firestore.googleapis.com https://firebaseinstallations.googleapis.com https://content-firebaseappcheck.googleapis.com https://recaptchaenterprise.googleapis.com https://accounts.google.com https://www.google.com https://partyplanner-backend.vercel.app https://*.cloudfunctions.net https://*.run.app; frame-src https://accounts.google.com https://www.google.com https://recaptcha.google.com https://www.recaptcha.net https://*.firebaseapp.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self'; upgrade-insecure-requests">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
 <link rel="icon" type="image/png" href="./src/assets/gorro.png">
 
 <title>PartyPlanner</title>
 
 
-  <title>PartyPlanner</title>
-
-
 
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    
 
     
     
@@ -53,36 +53,12 @@
       --shadow-glow: 0 0 40px rgba(99, 102, 241, 0.3);
     }
 
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    
 
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--bg-base);
-      color: var(--text-primary);
-      line-height: 1.6;
-      overflow-x: hidden;
-      position: relative;
-    }
+    
 
     /* Fondo animado con gradientes */
-    body::before {
-      content: '';
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: 
-        radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
-        radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
-        radial-gradient(circle at 40% 40%, rgba(99, 102, 241, 0.2) 0%, transparent 50%);
-      animation: float 20s ease-in-out infinite;
-      z-index: -1;
-    }
+    
 
     @keyframes float {
       0%, 100% { transform: translate(0, 0) rotate(0deg); }
@@ -91,410 +67,135 @@
     }
 
     /* Header mejorado */
-    header {
-      background: rgba(15, 14, 23, 0.8);
-      backdrop-filter: blur(20px);
-      border-bottom: 1px solid var(--border);
-      padding: 1rem 2rem;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      box-shadow: var(--shadow-lg);
-    }
+    
 
-    .header-content {
-      max-width: 1400px;
-      margin: 0 auto;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
+    
 
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-size: 1.5rem;
-      font-weight: 800;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
+    
 
-    .brand::before {
-      content: '🎓';
-      font-size: 1.8rem;
-      -webkit-text-fill-color: initial;
-    }
+    
 
     /* Navegación mejorada */
-    .nav {
-      display: flex;
-      gap: 0.5rem;
-      align-items: center;
-    }
+    
 
-    .nav-tab {
-      position: relative;
-      background: transparent;
-      border: none;
-      color: var(--text-secondary);
-      padding: 0.6rem 1.2rem;
-      border-radius: 12px;
-      cursor: pointer;
-      font-weight: 500;
-      transition: all 0.3s ease;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
+    
 
-    .nav-tab:hover {
-      background: var(--bg-card);
-      color: var(--text-primary);
-      transform: translateY(-2px);
-    }
+    
 
-    .nav-tab.active {
-      background: var(--primary);
-      color: white;
-      box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
-    }
+    
 
-    .nav-tab::before {
-      font-size: 1.2rem;
-    }
+    
 
-    .nav-tab[data-route="#/perfil"]::before { content: '👤'; }
-    .nav-tab[data-route="#/semestres"]::before { content: '📚'; }
-    .nav-tab[data-route="#/horario"]::before { content: '📅'; }
-    .nav-tab[data-route="#/notas"]::before { content: '📊'; }
-    .nav-tab[data-route="#/malla"]::before { content: '🗺️'; }
-    .nav-tab[data-route="#/progreso"]::before { content: '🏁'; }
-    .nav-tab[data-route="#/calendario"]::before { content: '📆'; }
-    .nav-tab[data-route="#/asistencia"]::before { content: '📋'; }
-    .nav-tab[data-route="#/party"]::before { content: '🎉'; }
-    .nav-tab[data-route="#/ayuda"]::before { content: '🆘'; }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 
 
 
     /* Botones mejorados */
-    .btn {
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-      color: white;
-      border: none;
-      padding: 0.7rem 1.5rem;
-      border-radius: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
-    }
+    
 
-    .btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
-    }
+    
 
-    .btn:active {
-      transform: translateY(0);
-    }
+    
 
-    .btn-secondary {
-      background: var(--bg-card);
-      box-shadow: none;
-      border: 1px solid var(--border);
-    }
+    
 
-    .btn-secondary:hover {
-      background: var(--bg-card-hover);
-      box-shadow: var(--shadow-md);
-    }
+    
 
     /* Container principal */
-    .container {
-      max-width: 1400px;
-      margin: 2rem auto;
-      padding: 0 2rem;
-    }
+    
 
     /* Cards mejoradas */
-    .card {
-      background: rgba(255, 255, 255, 0.05);
-      backdrop-filter: blur(10px);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 2rem;
-      box-shadow: var(--shadow-lg);
-      transition: all 0.3s ease;
-      position: relative;
-      overflow: hidden;
-    }
+    
 
-    .card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 4px;
-      background: linear-gradient(90deg, var(--primary), var(--accent));
-      opacity: 0.8;
-    }
+    
 
-    .card:hover {
-      transform: translateY(-4px);
-      box-shadow: var(--shadow-glow);
-    }
+    
 
-    .card h2 {
-      font-size: 1.8rem;
-      font-weight: 700;
-      margin-bottom: 1.5rem;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
+    
 
-    .card h3 {
-      font-size: 1.2rem;
-      font-weight: 600;
-      margin-bottom: 1rem;
-      color: var(--primary-light);
-    }
+    
 
     /* Perfil Section Mejorado */
-    .profile-section {
-      display: grid;
-      grid-template-columns: 300px 1fr;
-      gap: 2rem;
-    }
+    
 
-    .profile-avatar {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 1rem;
-    }
+    
 
-    .avatar-circle {
-      width: 150px;
-      height: 150px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--primary), var(--accent));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 4rem;
-      box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
-      position: relative;
-      overflow: hidden;
-    }
+    
 
-    .avatar-circle::after {
-      content: '';
-      position: absolute;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
-      background: linear-gradient(45deg, transparent, rgba(255,255,255,0.3), transparent);
-      animation: shine 3s infinite;
-    }
+    
 
     @keyframes shine {
       0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
       100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
     }
 
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 1.5rem;
-    }
+    
 
-    .form-field {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
+    
 
-    .form-field label {
-      font-weight: 500;
-      color: var(--text-secondary);
-      font-size: 0.9rem;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
+    
 
-    .form-field input,
-    .form-field select {
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid var(--border);
-      color: var(--text-primary);
-      padding: 0.8rem 1rem;
-      border-radius: 12px;
-      font-size: 1rem;
-      transition: all 0.3s ease;
-    }
+    
 
     .form-field select option {
   color: #111;         /* texto oscuro para que se vea en el menú */
   background: #fff;    /* fondo claro del menú desplegable */
 }
 
-.form-field select option:checked,
-.form-field select option:hover {
-  color: #fff;
-  background: var(--primary);
-}
 
 
-    .form-field input:focus,
-    .form-field select:focus {
-      outline: none;
-      border-color: var(--primary);
-      background: rgba(255, 255, 255, 0.1);
-      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
-    }
+
+    
 
     /* Horario mejorado */
-    .schedule-grid {
-      display: grid;
-      grid-template-columns: 80px repeat(5, 1fr);
-      gap: 1rem;
-      background: rgba(255, 255, 255, 0.03);
-      border-radius: 20px;
-      padding: 1.5rem;
-    }
+    
 
-    .schedule-header {
-      font-weight: 600;
-      color: var(--primary-light);
-      text-align: center;
-      padding: 1rem;
-      background: rgba(99, 102, 241, 0.1);
-      border-radius: 12px;
-    }
+    
 
-    .schedule-cell {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 0.8rem;
-      min-height: 80px;
-      transition: all 0.3s ease;
-      position: relative;
-    }
+    
 
-    .schedule-cell:hover {
-      background: rgba(255, 255, 255, 0.08);
-      transform: scale(1.02);
-      box-shadow: var(--shadow-md);
-    }
+    
 
-    .course-block {
-      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-      color: white;
-      padding: 0.8rem;
-      border-radius: 10px;
-      font-weight: 500;
-      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
+    
 
-    .course-block:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
-    }
+    
 
     /* Notas Section */
-    .grades-container {
-      display: grid;
-      gap: 1.5rem;
-    }
+    
 
-    .grade-item {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 1rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      transition: all 0.3s ease;
-    }
+    
 
-    .grade-item:hover {
-      background: rgba(255, 255, 255, 0.08);
-      transform: translateX(4px);
-    }
+    
 
-    .grade-value {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: var(--success);
-    }
+    
 
-    .grade-value.fail {
-      color: var(--danger);
-    }
+    
 
     /* Stats cards */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1.5rem;
-      margin-top: 2rem;
-    }
+    
 
-    .stat-card {
-      background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(99, 102, 241, 0.05));
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 1.5rem;
-      text-align: center;
-      transition: all 0.3s ease;
-    }
+    
 
-    .stat-card:hover {
-      transform: translateY(-4px);
-      box-shadow: var(--shadow-lg);
-    }
+    
 
-    .stat-value {
-      font-size: 2.5rem;
-      font-weight: 800;
-      background: linear-gradient(135deg, var(--primary), var(--accent));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
+    
 
-    .stat-label {
-      color: var(--text-secondary);
-      font-size: 0.9rem;
-      margin-top: 0.5rem;
-    }
+    
 
     /* Welcome banner */
-    .welcome-banner {
-      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-      border-radius: 20px;
-      padding: 2rem;
-      margin-bottom: 2rem;
-      position: relative;
-      overflow: hidden;
-    }
+    
 
 .welcome-banner::before {
-  content: '📚';
+  content: "📚";
   position: absolute;
   right: 2rem;
   top: 50%;
@@ -506,38 +207,14 @@
 
 
 
-    .welcome-title {
-      font-size: 2rem;
-      font-weight: 700;
-      margin-bottom: 0.5rem;
-    }
+    
 
-    .welcome-subtitle {
-      color: rgba(255, 255, 255, 0.9);
-      font-size: 1.1rem;
-    }
+    
 
     /* User badge */
-    .user-badge {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      background: rgba(255, 255, 255, 0.1);
-      padding: 0.5rem 1rem;
-      border-radius: 20px;
-      border: 1px solid var(--border);
-    }
+    
 
-    .user-avatar {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--accent), var(--accent-light));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 600;
-    }
+    
 
     /* Animations */
     @keyframes slideIn {
@@ -551,9 +228,7 @@
       }
     }
 
-    .page {
-      animation: slideIn 0.5s ease;
-    }
+    
 
     /* Responsive */
     @media (max-width: 768px) {
@@ -578,53 +253,22 @@
     }
 
     /* Loading animation */
-    .loading {
-      display: inline-block;
-      width: 20px;
-      height: 20px;
-      border: 3px solid var(--border);
-      border-radius: 50%;
-      border-top-color: var(--primary);
-      animation: spin 1s ease-in-out infinite;
-    }
+    
 
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
 
     /* Tooltips */
-    [data-tooltip] {
-      position: relative;
-    }
+    
 
-    [data-tooltip]:hover::after {
-      content: attr(data-tooltip);
-      position: absolute;
-      bottom: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0, 0, 0, 0.9);
-      color: white;
-      padding: 0.5rem 1rem;
-      border-radius: 8px;
-      font-size: 0.9rem;
-      white-space: nowrap;
-      z-index: 1000;
-      pointer-events: none;
-    }
+    
 
     /* Party section */
-    .party-card {
-      background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.05));
-      border: 2px solid var(--accent);
-      border-radius: 20px;
-      padding: 1.5rem;
-      position: relative;
-      overflow: hidden;
-    }
+    
 
 .party-card::before {
-  content: '🎉';
+  content: "🎉";
   position: absolute;
   right: 1rem;
   top: 1rem;
@@ -635,28 +279,9 @@
 
 
 
-    .party-status {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(16, 185, 129, 0.2);
-      color: var(--success);
-      padding: 0.5rem 1rem;
-      border-radius: 20px;
-      font-weight: 600;
-    }
+    
 
-    .party-status::before {
-      content: '✓';
-      width: 20px;
-      height: 20px;
-      background: var(--success);
-      color: white;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+    
 
     /* Modal styles */
     .modal {
@@ -699,37 +324,22 @@
     }
 
     /* Hidden class */
-    .hidden {
-      display: none !important;
-    }
+    
 
 /* Ocultar el input de archivo del avatar */
-#pfAvatarFile {
-  display: none !important;
-}
 
-.muted { color: var(--text-secondary); font-size: 0.9rem; }
-.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0; }
+
+
+
 
 /* Hace visible el texto del date input en temas oscuros (Chromium/WebKit) */
-input[type="date"] {
-  color: var(--text-primary) !important;
-}
+
 
 /* Campos internos del control de fecha */
-input[type="date"]::-webkit-datetime-edit,
-input[type="date"]::-webkit-datetime-edit-text,
-input[type="date"]::-webkit-datetime-edit-month-field,
-input[type="date"]::-webkit-datetime-edit-day-field,
-input[type="date"]::-webkit-datetime-edit-year-field {
-  color: var(--text-primary) !important;
-}
+
 
 /* Icono del calendario en tema oscuro */
-input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(1);
-  opacity: .85;
-}
+
 
 /* Forzar visibilidad del texto del control de fecha en navegadores WebKit/Blink */
 input[type="date"] {
@@ -740,57 +350,22 @@ input[type="date"] {
 }
 
 /* Forzar color de las subpartes del control */
-input[type="date"]::-webkit-datetime-edit,
-input[type="date"]::-webkit-datetime-edit-fields-wrapper,
-input[type="date"]::-webkit-datetime-edit-text,
-input[type="date"]::-webkit-datetime-edit-month-field,
-input[type="date"]::-webkit-datetime-edit-day-field,
-input[type="date"]::-webkit-datetime-edit-year-field {
-  color: var(--text-primary) !important;
-  -webkit-text-fill-color: var(--text-primary) !important;
-}
+
 
 /* Icono del calendario en tema oscuro */
-input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(1);
-  opacity: .9;
-}
+
 
 /* Forzar visibilidad del texto del date en tema oscuro (Blink/WebKit) */
-#page-perfil .form-field input[type="date"]{
-  color: var(--text-primary) !important;
-  -webkit-text-fill-color: var(--text-primary) !important;
-  background-color: rgba(255, 255, 255, 0.08) !important;
-  color-scheme: dark;
-}
-#page-perfil .form-field input[type="date"]::-webkit-datetime-edit,
-#page-perfil .form-field input[type="date"]::-webkit-datetime-edit-fields-wrapper,
-#page-perfil .form-field input[type="date"]::-webkit-datetime-edit-text,
-#page-perfil .form-field input[type="date"]::-webkit-datetime-edit-month-field,
-#page-perfil .form-field input[type="date"]::-webkit-datetime-edit-day-field,
-#page-perfil .form-field input[type="date"]::-webkit-datetime-edit-year-field{
-  color: var(--text-primary) !important;
-  -webkit-text-fill-color: var(--text-primary) !important;
-}
-#page-perfil .form-field input[type="date"]::-webkit-calendar-picker-indicator{
-  filter: invert(1);
-  opacity: .9;
-}
+
+
+
 
 /* icono calendario visible en dark mode */
-input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(1) opacity(.9);
-  cursor: pointer;
-}
+
 
 
 /* --- FIX DEFINITIVO: asegurar que el valor del date sea visible en dark --- */
-#pfBirthday {
-  color: var(--text-primary) !important;
-  -webkit-text-fill-color: var(--text-primary) !important;
-  background-color: rgba(255, 255, 255, 0.08) !important;
-  color-scheme: dark;
-}
+
 
 /* El “texto interno” del control (Blink/WebKit) */
 #pfBirthday::-webkit-datetime-edit,
@@ -805,18 +380,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 /* Ícono del calendario legible en dark */
-#pfBirthday::-webkit-calendar-picker-indicator{
-  filter: invert(1);
-  opacity: .95;
-  cursor: pointer;
-}
+
 
 /* Evita que un autofill lo pinte transparente */
-#pfBirthday:-webkit-autofill{
-  -webkit-text-fill-color: var(--text-primary) !important;
-  -webkit-box-shadow: 0 0 0px 1000px rgba(255,255,255,0.08) inset !important;
-          box-shadow: 0 0 0px 1000px rgba(255,255,255,0.08) inset !important;
-}
+
 
 /* Firefox: mantener esquema oscuro del widget */
 @-moz-document url-prefix() {
@@ -835,30 +402,13 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 /* Texto interno del control (Chrome/Safari/Edge) */
-#pfBirthday::-webkit-datetime-edit,
-#pfBirthday::-webkit-datetime-edit-fields-wrapper,
-#pfBirthday::-webkit-datetime-edit-text,
-#pfBirthday::-webkit-datetime-edit-month-field,
-#pfBirthday::-webkit-datetime-edit-day-field,
-#pfBirthday::-webkit-datetime-edit-year-field{
-  opacity: 1 !important;
-  color: var(--text-primary) !important;
-  -webkit-text-fill-color: var(--text-primary) !important;
-}
+
 
 /* Indicador del calendario visible en dark/light */
-#pfBirthday::-webkit-calendar-picker-indicator{
-  filter: invert(1);
-  opacity: 1 !important;
-  cursor: pointer;
-}
+
 
 /* Evita que autofill lo deje “transparente” */
-#pfBirthday:-webkit-autofill{
-  -webkit-text-fill-color: var(--text-primary) !important;
-  -webkit-box-shadow: 0 0 0 1000px rgba(255,255,255,.08) inset !important;
-          box-shadow: 0 0 0 1000px rgba(255,255,255,.08) inset !important;
-}
+
 
 /* Firefox: fuerza esquema y color */
 @-moz-document url-prefix() {
@@ -876,9 +426,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 /* evita que el texto de los tabs se parta y se “meta” en el logo */
-.nav-tab {
-  white-space: nowrap;
-}
+
 
 /* --- Separación visual entre Reglas y Cálculo --- */
 #gr-rulesCard { 
@@ -900,89 +448,38 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 /* --- Header de "Cálculo de notas" con botón a la derecha --- */
-.gr-calcHeader {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-#gr-openSim.ghost {
-  border: 1px solid rgba(255,255,255,0.15);
-  background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.15));
-  color: #e0e7ff;
-  font-weight: 500;
-  padding: 6px 14px;
-  border-radius: 12px;
-  font-size: 0.9rem;
-  transition: all 0.25s ease;
-  backdrop-filter: blur(4px);
-}
 
-#gr-openSim.ghost:hover {
-  border-color: rgba(139,92,246,0.6);
-  background: linear-gradient(135deg, rgba(99,102,241,0.3), rgba(139,92,246,0.3));
-  color: #fff;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
-}
 
-#gr-openSim.ghost:active {
-  transform: scale(0.96);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.3) inset;
-}
+
+
+
+
 
 
 /* (opc) pequeña separación superior al primer input de la fórmula */
-#gr-calcCard .row + .row { margin-top: 8px; }
 
 
-.sim-lock {
-  overflow: hidden !important;
-  overscroll-behavior: none;
-}
 
-.progress-inner{height:100%;
-  background:linear-gradient(90deg, var(--primary, #22c55e), var(--accent, #3b82f6));
-}
 
-.export-bar {
-  display:flex; gap:8px; margin:8px 0 12px;
-}
+
+
+
+
 @media print {
   nav, .nav, .export-bar, #pfActions { display:none !important; }
   body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 
-.block-del-btn {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  background: rgba(0,0,0,0.55);
-  color: #fff;
-  border: none;
-  font-size: 12px;
-  line-height: 1;
-  padding: 2px 6px;
-  border-radius: 4px;
-  cursor: pointer;
-  display: none;
-  z-index: 2;
-}
 
-.placed:hover .block-del-btn {
-  display: block;
-}
+
+
 
 .block-del-btn:hover {
   background: rgba(239, 68, 68, 0.85); /* rojo suave */
 }
 
 /* --- Preview general --- */
-.cell.slot.over::after {
-  content: "";
-  position: absolute;
-  pointer-events: none;
-  border: 2px dashed rgba(255,255,255,0.6);
-}
+
 
 .cell.slot.over.hint-top::after {
   content: "";
@@ -995,16 +492,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   pointer-events: none;
 }
 
-.cell.slot.over.hint-full::after {
-  content: "";
-  position: absolute;
-  top: var(--pad);
-  bottom: var(--pad);
-  left: var(--pad);
-  right: var(--pad);
-  border: 2px dashed rgba(255,255,255,0.6);
-  pointer-events: none;
-}
+
 
 .cell.slot.over.hint-bottom::after {
   content: "";
@@ -1019,64 +507,21 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 
 /* --- Horizontales --- */
-.cell.slot.over.hint-left::after {
-  top: var(--pad);
-  bottom: var(--pad);
-  left: var(--pad);
-  right: 50%;
-}
 
 
-.cell.slot.over.hint-right::after {
-  top: var(--pad);
-  bottom: var(--pad);
-  left: 50%;
-  right: var(--pad);
-}
 
-.cell.slot.over.hint-bottom.hint-left::after {
-  top: 50%;
-  left: var(--pad);
-  right: 50%;
-  bottom: var(--pad);
-}
 
-.cell.slot.over.hint-bottom.hint-right::after {
-  top: 50%;
-  left: 50%;
-  right: var(--pad);
-  bottom: var(--pad);
-}
 
-.att-days {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  padding: 6px 0;
-}
-.att-record {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 4px 8px;
-  white-space: nowrap;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.btn-del-att {
-  font-size: 0.8rem;
-  padding: 2px 6px;
-  background: rgba(239,68,68,0.8);
-  border-radius: 6px;
-  cursor: pointer;
-}
+
+
+
+
+
+
+
 
 /* Oculta nombre e icono en el menú superior */
-#userMenuName,
-#userMenuAvatar {
-  display: none !important;
-}
+
 
 #page-malla .malla-grid {
   display: grid;
@@ -1086,26 +531,9 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   padding: 10px;
 }
 
-#page-malla .grid-item {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  border-radius: 10px;
-  cursor: pointer;
-  overflow: hidden;
-  padding: 28px 10px;
-  box-shadow: inset 0 0 0 2px rgba(0,0,0,.18);
-}
 
-#page-malla .grid-item::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(0,0,0,0.18), transparent 22%, transparent 78%, rgba(0,0,0,0.18));
-  pointer-events: none;
-}
+
+
 
 #page-malla .grid-item:hover {
   transform: translateY(-2px);
@@ -1131,116 +559,43 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 
 /* ====== AYUDA ====== */
-#page-ayuda details {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  margin: 12px 0;
-  padding: 12px 16px;
-  cursor: pointer;
-  transition: background 0.25s ease;
-}
 
-#page-ayuda details:hover {
-  background: rgba(255,255,255,0.08);
-}
 
-#page-ayuda summary {
-  font-weight: 600;
-  color: var(--primary-light);
-  font-size: 1.1rem;
-  list-style: none;
-}
 
-#page-ayuda summary::marker,
-#page-ayuda summary::-webkit-details-marker {
-  display: none;
-}
 
-#page-ayuda summary::after {
-  content: "›";
-  float: right;
-  transform: rotate(90deg);
-  transition: transform 0.25s ease;
-}
 
-#page-ayuda details[open] summary::after {
-  transform: rotate(270deg);
-}
 
-.help-subsection {
-  margin-top: 8px;
-  padding-left: 8px;
-}
 
-.help-subsection h4 {
-  color: var(--accent-light);
-  font-size: 0.95rem;
-  margin-top: 8px;
-  margin-bottom: 4px;
-}
 
-.help-subsection ul {
-  list-style: none;
-  padding-left: 0;
-  margin: 0 0 8px 0;
-}
 
-.help-subsection li {
-  background: rgba(255,255,255,0.04);
-  border-radius: 8px;
-  margin: 3px 0;
-  padding: 6px 10px;
-  font-size: 0.9rem;
-}
 
-.help-subsection code {
-  color: var(--primary-light);
-  background: rgba(255,255,255,0.1);
-  border-radius: 4px;
-  padding: 2px 6px;
-  font-family: monospace;
-}
+
+
+
+
+
+
+
+
+
+
+
 
 
 /* === Colores para los botones del modal de asistencia === */
-.att-present {
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-  color: white;
-}
 
-.att-absent {
-  background: linear-gradient(135deg, #dc2626, #b91c1c);
-  color: #fff;
-}
 
-.att-justified {
-  background: linear-gradient(135deg, #fbbf24, #f59e0b);
-  color: #111;
-  font-weight: 600;
-}
 
-.att-noclass {
-  background: linear-gradient(135deg, #ef4444, #7f1d1d);
-  color: #fff;
-  opacity: 0.85;
-}
+
+
+
+
 
 /* Efecto hover */
-.att-present:hover,
-.att-absent:hover,
-.att-justified:hover,
-.att-noclass:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 3px 10px rgba(0,0,0,0.3);
-}
 
 
-.placed.dragging {
-  opacity: 0.7;
-  transform: scale(1.05);
-  transition: transform 0.15s ease;
-}
+
+
 
 /* === Horario continuo (tipo Google Calendar) === */
 .timeline {
@@ -1262,50 +617,19 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   padding-left: 6px;
 }
 
-.timeline-day {
-  position: relative;
-  border-left: 1px solid rgba(255,255,255,0.08);
-}
 
-.timeline-block {
-  position: absolute;
-  left: 6%;
-  right: 6%;
-  border-radius: 8px;
-  color: white;
-  padding: 4px 6px;
-  font-size: 0.8rem;
-  overflow: hidden;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-}
 
-.cal-evt {
-  position: relative;
-  border-radius: 6px;
-  margin: 2px 0;
-  padding: 4px 6px;
-  font-size: 0.85rem;
-  transition: transform 0.1s ease;
-}
 
-.cal-evt:hover {
-  transform: scale(1.02);
-}
 
-.cal-evt .cal-del:hover {
-  color: red !important;
-}
 
-.grade-item.dragging {
-  opacity: 0.7;
-  transform: scale(1.03);
-  background: rgba(99, 102, 241, 0.15);
-  border: 1px dashed var(--primary);
-}
 
-.grade-item {
-  transition: transform 0.15s ease, background 0.15s ease;
-}
+
+
+
+
+
+
+
 
 
 .party-members-grid {
@@ -1808,8 +1132,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
       <div class="form-field">
         <label for="pfBirthday">Fecha de nacimiento</label>
-        <input id="pfBirthday" type="date" inputmode="none"
-       onkeydown="return false" onpaste="return false" />
+        <input id="pfBirthday" type="date" inputmode="none" />
 
       </div>
 
@@ -1853,6 +1176,26 @@ input[type="date"]::-webkit-calendar-picker-indicator {
         <input id="pfPhone" type="tel" placeholder="+56 9 1234 5678" />
       </div>
     </div>
+  </div>
+
+  <div class="security-device-card" aria-labelledby="securityDeviceTitle">
+    <div>
+      <h3 id="securityDeviceTitle">🔒 Seguridad de este dispositivo</h3>
+      <p class="muted">
+        Por defecto PartyPlanner mantiene los datos de Firestore solo en memoria. Activa el modo confiable únicamente en un computador personal.
+      </p>
+    </div>
+
+    <label class="security-device-toggle">
+      <input id="pfTrustedDevice" type="checkbox" />
+      <span>Confiar en este dispositivo y permitir caché sin conexión</span>
+    </label>
+
+    <div id="pfTrustedDeviceStatus" class="muted" aria-live="polite"></div>
+
+    <button id="pfClearLocalCache" class="btn btn-secondary" type="button">
+      Borrar caché local de Firestore
+    </button>
   </div>
 
   <div id="pfActions" style="margin-top: 2rem; display: flex; gap: 1rem;">

@@ -1,12 +1,11 @@
 // js/courses.js
 import { db } from './firebase.js';
 import { $, state } from './state.js';
+import { safeHexColor, escapeAttr } from './security/html.js';
 import {
   collection, addDoc, onSnapshot, doc, deleteDoc, query, orderBy,
   setDoc, getDoc, getDocs, where, serverTimestamp, Timestamp
-} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-
-import { onCoursesChanged as gradesOnCourses } from './grades.js';
+} from 'firebase/firestore';
 
 // Escala por defecto según la universidad del semestre activo
 let defaultCourseScale = 'USM';
@@ -151,7 +150,6 @@ function subscribeCourses(){
     state.courses = list;
     renderCourses(list);
 
-    gradesOnCourses?.();
     document.dispatchEvent(new Event('courses:changed'));
   }, 300));
 }
@@ -182,17 +180,17 @@ function renderCourses(list){
           width:12px;
           height:12px;
           border-radius:999px;
-          background:${escapeHtml(c.color || '#3B82F6')};
+          background:${safeHexColor(c.color, '#3B82F6')};
           border:1px solid rgba(255,255,255,.25);
         "
       ></span>
-      <span>Color: ${escapeHtml((c.color || '#3B82F6').toUpperCase())}</span>
+      <span>Color: ${escapeHtml(safeHexColor(c.color, '#3B82F6').toUpperCase())}</span>
     </div>
   </div>
 
   <div class="inline">
-    <button class="ghost course-edit" data-id="${c.id}">Editar</button>
-    <button class="danger course-del"  data-id="${c.id}">Eliminar</button>
+    <button class="ghost course-edit" data-id="${escapeAttr(c.id)}">Editar</button>
+    <button class="danger course-del"  data-id="${escapeAttr(c.id)}">Eliminar</button>
   </div>
 `;
     host.appendChild(item);
@@ -242,7 +240,6 @@ async function saveCourse(){
 
 
     _resetCourseForm();
-    gradesOnCourses?.();
   } catch(e){
     console.error(e);
     alert(`No se pudo guardar el ramo: ${e?.message || e}`);
@@ -259,7 +256,6 @@ async function deleteCourse(id){
   try{
     await deleteDoc(doc(db,'users',state.currentUser.uid,'semesters',state.activeSemesterId,'courses',id));
     if (state.editingCourseId===id) _resetCourseForm();
-    gradesOnCourses?.();
   } catch(e){
     console.error(e);
     alert(`No se pudo eliminar: ${e?.message || e}`);

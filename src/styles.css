@@ -582,7 +582,7 @@ header {
   border: 0;
 }
 
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    
 
     
     
@@ -2272,3 +2272,35 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 
 /*termina*/
+
+/* ===== Seguridad del dispositivo ===== */
+.security-device-card {
+  margin-top: 1.5rem;
+  padding: 1rem 1.1rem;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.035);
+  display: grid;
+  gap: .9rem;
+}
+
+.security-device-card h3 {
+  margin: 0 0 .35rem;
+}
+
+.security-device-toggle {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.security-device-toggle input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+}
+
+.security-device-card .btn {
+  justify-self: start;
+}

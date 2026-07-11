@@ -1,12 +1,11 @@
 import { db } from './firebase.js';
 import { canViewPartyZone, privacyBlockedMessage } from './privacy.js';
 import { $, state, setHidden } from './state.js';
-import { preloadAttendanceData } from './attendance.js';
-import { openGradesPdfExportModal } from './export.js';
+import { evaluateSafeExpression } from './security/safeExpression.js';
 import {
   collection, query, orderBy, getDocs, onSnapshot, doc, getDoc,
   addDoc, updateDoc, deleteDoc, setDoc , serverTimestamp 
-} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+} from 'firebase/firestore';
 
 const _courseComponentsCache = new Map(); // courseId -> [{...component}]
 const _courseHeaderCache = new Map();     // courseId -> { scale, finalExpr, rulesText }
@@ -17,7 +16,35 @@ let components = []; // [{id,key,name,score}]
 let header = { scale: 'USM', finalExpr: '', rulesText: '' };
 // --- Referencias cruzadas de notas finales (otros ramos del MISMO semestre) ---
 let crossFinals = { byName:{}, byCode:{}, byId:{} };  // caches
+let _crossFinalsSemesterKey = '';
+const _crossFinalCourseCache = new Map(); // courseId -> { final, scale }
+let _crossFinalsBuildPromise = null;
 let unsubGrades = null;
+
+function currentCrossFinalsSemesterKey(){
+  return `${state.currentUser?.uid || ''}:${state.activeSemesterId || ''}`;
+}
+
+function resetCrossFinalsCache(){
+  _crossFinalsSemesterKey = currentCrossFinalsSemesterKey();
+  _crossFinalCourseCache.clear();
+  _crossFinalsBuildPromise = null;
+  crossFinals = { byName:{}, byCode:{}, byId:{} };
+}
+
+function invalidateCrossFinalCourse(courseId){
+  const key = currentCrossFinalsSemesterKey();
+  if (_crossFinalsSemesterKey !== key) {
+    resetCrossFinalsCache();
+    return;
+  }
+
+  if (courseId) {
+    _crossFinalCourseCache.delete(courseId);
+  } else {
+    _crossFinalCourseCache.clear();
+  }
+}
 
 /* ====== Nombres de grupos (ruta corregida) ====== */
 let _groupNamesCache = null; // { certamenes:'...', controles:'...', ... }
@@ -228,6 +255,16 @@ document.addEventListener('route:notas', () => {
 
 
 
+document.addEventListener('semester:changed', () => {
+  resetCrossFinalsCache();
+  onActiveSemesterChanged();
+});
+
+document.addEventListener('courses:changed', () => {
+  invalidateCrossFinalCourse(null);
+  onCoursesChanged().catch(err => console.warn('Error actualizando notas por cambio de ramos:', err));
+});
+
 export async function onCoursesChanged(){
   await loadCoursesIntoSelect();
 }
@@ -241,7 +278,7 @@ export function onActiveSemesterChanged(){
 const shSel = document.getElementById('gr-sh-semSel');
 if (shSel && state.activeSemesterData?.label) {
   // muestra el semestre activo actual
-  shSel.innerHTML = `<option selected>${state.activeSemesterData.label}</option>`;
+  shSel.innerHTML = `<option selected>${esc(state.activeSemesterData.label)}</option>`;
   
   // bloquea interacción
   shSel.disabled = true;
@@ -252,6 +289,7 @@ if (shSel && state.activeSemesterData?.label) {
 // ✅ Esperar la precarga de asistencia antes de renderizar las notas
 (async () => {
   try {
+    const { preloadAttendanceData } = await import('./attendance.js');
     await preloadAttendanceData(); // espera la parte getDocs()
     console.log('✅ Asistencia precargada, ahora sí recalculamos notas');
     computeAndRender();
@@ -361,6 +399,7 @@ function ensureTopExportNotesButton(){
 
   exportBtn.addEventListener('click', async () => {
     try {
+      const { openGradesPdfExportModal } = await import('./export.js');
       await openGradesPdfExportModal();
     } catch (err) {
       console.error(err);
@@ -786,6 +825,7 @@ async function saveExpr(courseIdOverride = null){
 
   // ✅ Recalcular siempre que sea el ramo activo
   if (courseId === currentCourseId) {
+    invalidateCrossFinalCourse(courseId);
     computeAndRender();
     rebuildCrossFinals().then(() => {
       if (courseId === currentCourseId) computeAndRender();
@@ -819,12 +859,9 @@ async function saveRules(courseIdOverride = null){
 
   await setDoc(ref, { rulesText: txt }, { merge: true });
 
-  // ✅ Recalcular siempre que sea el ramo activo
+  // Las reglas no cambian las notas finales cruzadas, así que no releemos otros ramos.
   if (courseId === currentCourseId) {
     computeAndRender();
-    rebuildCrossFinals().then(() => {
-      if (courseId === currentCourseId) computeAndRender();
-    }).catch(() => {});
   }
 }
 
@@ -867,7 +904,7 @@ async function watchComponents(courseIdOverride = currentCourseId) {
       // Migración de order en background (no bloquea render)
       const needsOrder = list.filter(x => typeof x.order !== 'number');
       if (needsOrder.length) {
-        import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js')
+        import('firebase/firestore')
           .then(async ({ writeBatch }) => {
             const batch = writeBatch(db);
             const base = Date.now();
@@ -898,6 +935,9 @@ async function watchComponents(courseIdOverride = currentCourseId) {
 
       await renderComponents(list);
       computeAndRender();
+
+      // Solo invalida el ramo que cambió; el resto permanece en caché.
+      invalidateCrossFinalCourse(courseIdOverride);
 
       // cross-finals en background, no bloquea el render inicial
       rebuildCrossFinals().then(() => {
@@ -1212,7 +1252,7 @@ if (customKeys.has(key)) {
 
     try {
       // 🔥 Borrar todas las evaluaciones de ESA carpeta para siempre
-      const { writeBatch } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
+      const { writeBatch } = await import('firebase/firestore');
       const batch = writeBatch(db);
 
       // "items" es el arreglo de componentes que están dentro de este grupo
@@ -1341,6 +1381,7 @@ if (customKeys.has(key)) {
             }
 
             await updateDoc(ref, { name: newName, key: newKey });
+            invalidateCrossFinalCourse(currentCourseId);
             await rebuildCrossFinals();
             computeAndRender();
             renderComponents(components);
@@ -1535,66 +1576,136 @@ if (currentCourseId) {
 
 
 async function rebuildCrossFinals(){
-  crossFinals = { byName:{}, byCode:{}, byId:{} };
-  if (!state.currentUser || !state.activeSemesterId) return;
-  // Necesitamos la lista de ramos del semestre (ya la tiene state.courses gracias a courses.js)
-  const courses = Array.isArray(state.courses) ? state.courses : [];
-  // Para cada ramo, leemos su meta y componentes, y calculamos su final
-  for (const c of courses){
-    try{
-      const metaRef = doc(
-        db,'users',state.currentUser.uid,'semesters',state.activeSemesterId,
-        'courses',c.id,'grading','meta'
-      );
-      const metaSnap = await getDoc(metaRef);
-      const meta = metaSnap.exists() ? metaSnap.data() : { scale:'USM', finalExpr:'' };
+  const semesterKey = currentCrossFinalsSemesterKey();
 
-      // Lee componentes
-      const compRef = collection(
-        db,'users',state.currentUser.uid,'semesters',state.activeSemesterId,
-        'courses',c.id,'grading','meta','components'
-      );
-      const compSnap = await getDocs(compRef);
-      const comps = compSnap.docs.map(d => ({ id:d.id, ...d.data() }));
+  if (!state.currentUser || !state.activeSemesterId) {
+    resetCrossFinalsCache();
+    return;
+  }
 
-      // Prepara valores (key -> score) en la escala del ramo
-      const values = {};
-      const min = meta.scale==='MAYOR' ? 1 : 0;
-      const max = meta.scale==='MAYOR' ? 7 : 100;
-      for (const k of comps){
-        if (typeof k.score === 'number' && isFinite(k.score)){
-          const v = Math.max(min, Math.min(max, k.score));
-          values[k.key] = v;
+  if (_crossFinalsSemesterKey !== semesterKey) {
+    resetCrossFinalsCache();
+  }
+
+  // Si ya hay una reconstrucción en curso, reutilizamos la misma promesa.
+  if (_crossFinalsBuildPromise) {
+    return _crossFinalsBuildPromise;
+  }
+
+  const uid = state.currentUser.uid;
+  const semId = state.activeSemesterId;
+  const courses = Array.isArray(state.courses) ? [...state.courses] : [];
+
+  _crossFinalsBuildPromise = (async () => {
+    const loadCourseFinal = async (c) => {
+      const cached = _crossFinalCourseCache.get(c.id);
+      if (cached) return { course: c, ...cached };
+
+      try {
+        let meta = _courseHeaderCache.get(c.id) || null;
+        let comps = _courseComponentsCache.get(c.id) || null;
+
+        const tasks = [];
+
+        if (!meta) {
+          tasks.push(
+            getDoc(doc(
+              db,'users',uid,'semesters',semId,
+              'courses',c.id,'grading','meta'
+            )).then(snap => {
+              meta = snap.exists()
+                ? snap.data()
+                : { scale:'USM', finalExpr:'', rulesText:'' };
+              _courseHeaderCache.set(c.id, { ...meta });
+            })
+          );
         }
-      }
 
-      // Calcula final (si hay fórmula)
-      let final = null;
-      if ((meta.finalExpr||'').trim()){
-        try{
-          final = safeEvalExpr(meta.finalExpr, values, {
-            avg, min: Math.min, max: Math.max,
-            final:  (name)=> NaN,            // evitar recursión entre ramos al precalcular
-            finalCode: (_)=> NaN,
-            finalId: (_)=> NaN
-          });
-          if (typeof final === 'number' && isFinite(final)){
-            final = truncate(final, meta.scale);
-          } else {
+        if (!comps) {
+          tasks.push(
+            getDocs(collection(
+              db,'users',uid,'semesters',semId,
+              'courses',c.id,'grading','meta','components'
+            )).then(snap => {
+              comps = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+              _courseComponentsCache.set(c.id, comps.map(x => ({ ...x })));
+            })
+          );
+        }
+
+        if (tasks.length) await Promise.all(tasks);
+
+        meta = meta || { scale:'USM', finalExpr:'' };
+        comps = Array.isArray(comps) ? comps : [];
+
+        const values = {};
+        const min = meta.scale === 'MAYOR' ? 1 : 0;
+        const max = meta.scale === 'MAYOR' ? 7 : 100;
+
+        for (const k of comps) {
+          if (typeof k.score === 'number' && isFinite(k.score)) {
+            values[k.key] = Math.max(min, Math.min(max, k.score));
+          }
+        }
+
+        let final = null;
+        if ((meta.finalExpr || '').trim()) {
+          try {
+            final = safeEvalExpr(meta.finalExpr, values, {
+              avg,
+              min: Math.min,
+              max: Math.max,
+              final: () => NaN,
+              finalCode: () => NaN,
+              finalId: () => NaN
+            });
+
+            if (typeof final === 'number' && isFinite(final)) {
+              final = truncate(final, meta.scale);
+            } else {
+              final = null;
+            }
+          } catch {
             final = null;
           }
-        }catch{ final = null; }
+        }
+
+        const entry = { final, scale: meta.scale || 'USM' };
+        _crossFinalCourseCache.set(c.id, entry);
+        return { course: c, ...entry };
+      } catch {
+        const entry = { final: null, scale: 'USM' };
+        _crossFinalCourseCache.set(c.id, entry);
+        return { course: c, ...entry };
       }
+    };
 
-      // DESPUÉS (normaliza nombre y código para búsquedas tolerantes)
-const nameKey = normStr(c.name);
-const codeKey = normStr(c.code);
-if (nameKey) crossFinals.byName[nameKey] = { final, scale: meta.scale, id:c.id };
-if (codeKey) crossFinals.byCode[codeKey] = { final, scale: meta.scale, id:c.id };
-crossFinals.byId[c.id] = { final, scale: meta.scale, id:c.id };
+    // Las lecturas faltantes se hacen en paralelo, y solo para ramos sin caché.
+    const results = await Promise.all(courses.map(loadCourseFinal));
 
+    // Descarta una respuesta vieja si el usuario cambió de semestre mientras cargaba.
+    if (currentCrossFinalsSemesterKey() !== semesterKey) return;
 
-    }catch{ /* ignorar errores puntuales para no romper la UI */ }
+    const next = { byName:{}, byCode:{}, byId:{} };
+
+    for (const item of results) {
+      const c = item.course;
+      const payload = { final:item.final, scale:item.scale, id:c.id };
+      const nameKey = normStr(c.name);
+      const codeKey = normStr(c.code);
+
+      if (nameKey) next.byName[nameKey] = payload;
+      if (codeKey) next.byCode[codeKey] = payload;
+      next.byId[c.id] = payload;
+    }
+
+    crossFinals = next;
+  })();
+
+  try {
+    await _crossFinalsBuildPromise;
+  } finally {
+    _crossFinalsBuildPromise = null;
   }
 }
 
@@ -1704,7 +1815,7 @@ function renderRulesStatus(r){
     return;
   }
   const okCount = r.items.filter(x=>x.ok).length;
-  const parts = r.items.map(x => x.ok ? `✅ ${x.text}` : `❌ ${x.text}`);
+  const parts = r.items.map(x => x.ok ? `✅ ${esc(x.text)}` : `❌ ${esc(x.text)}`);
   el.innerHTML = `<div><b>Reglas:</b> ${okCount}/${r.items.length} cumplidas</div><div style="margin-top:4px">${parts.join('<br/>')}</div>`;
 }
 
@@ -1804,7 +1915,7 @@ function getDragAfterElement(container, y) {
 // 🔹 Guarda el nuevo orden en Firestore (sin eliminar nada)
 async function persistNewOrder(ids) {
   if (!readyPath() || !Array.isArray(ids) || !ids.length) return;
-  const { writeBatch } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
+  const { writeBatch } = await import('firebase/firestore');
   const batch = writeBatch(db);
   let base = Date.now();
   const step = 1000;
@@ -1913,44 +2024,11 @@ function safeEvalExpr(expr, vars, fns = {}){
   const normalized = normalizeExpr(expr);
   const withQuoted = autoQuoteFunctionArgs(normalized);
 
-  // enmascara strings para no confundir identificadores dentro de comillas
-  const masked = withQuoted.replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/g, '0');
-
-  // solo permitimos letras, dígitos, _, ., +,-,*,/,%, comas y paréntesis
-  if (!/^[\w\s\.\+\-\*\/\(\),%<>!=]+$/.test(masked)) {
-    throw new Error('La fórmula contiene caracteres no permitidos.');
-  }
-
-  // convierte % a /100 para evaluar
-  const e = prepareForEval(withQuoted);
-
-  // 1) recolecta identificadores presentes en la expresión
-  const ids = (masked.match(/\b[A-Za-z_][A-Za-z0-9_]*\b/g) || []);
-
-  // funciones permitidas que NO deben convertirse en variables
-  const builtinFns = new Set(['avg','min','max','final','finalCode','finalId']);
-
-
-  // palabras JS que tampoco
-  const jsWords = new Set(['NaN','Infinity','Math','true','false']);
-
-  // 2) arma claves/valores con vars existentes
-  const keys = Object.keys(vars);
-  const vals = keys.map(k => vars[k] ?? 0);
-
-  // 3) agrega como variables = 0 todos los ids desconocidos
-  const have = new Set([...keys, ...Object.keys(fns)]);
-  for (const id of ids) {
-    if (builtinFns.has(id) || jsWords.has(id)) continue;
-    if (!have.has(id)) { keys.push(id); vals.push(0); have.add(id); }
-  }
-
-  // 4) evalúa con funciones y variables
-  const fnNames = Object.keys(fns);
-  const fnVals  = Object.values(fns);
-
-  // eslint-disable-next-line no-new-func
-  return Function(...fnNames, ...keys, `"use strict"; return (${e});`)(...fnVals, ...vals);
+  return evaluateSafeExpression(withQuoted, {
+    variables: vars,
+    functions: fns,
+    unknownIdentifierValue: 0
+  });
 }
 
 
@@ -2243,7 +2321,7 @@ async function gr_partyPopulateSemesterLocked(){
     return;
   }
 
-  sel.innerHTML = `<option selected>${activeLabel}</option>`;
+  sel.innerHTML = `<option selected>${escapeHtml(activeLabel)}</option>`;
   sel.disabled = true;
   sel.style.pointerEvents = 'none';
   sel.style.opacity = '0.7';

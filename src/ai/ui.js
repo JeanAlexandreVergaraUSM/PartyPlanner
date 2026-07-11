@@ -5,8 +5,9 @@
 import { detectIntent, extractSlots, chipsForRoute } from './router.js';
 import { tools } from './tools.js';
 import { humanize } from './humanize.js';
-import { $ } from '../js/state.js';
-import { state } from "../js/state.js";
+import { secureApiFetch } from '../security/secureApiFetch.js';
+import { $ } from '../state.js';
+import { state } from '../state.js';
 
 const PANEL_ID = 'dp-ai-panel';
 
@@ -85,20 +86,53 @@ function ensurePanel() {
 }
 
 /* ---------------- API ---------------- */
-const API_URL = "https://PartyPlanner-backend.vercel.app/api/ask";
+const API_URL = String(import.meta.env.VITE_AI_API_URL || '').trim();
+const AI_MAX_QUESTION_CHARS = 2000;
+const AI_MIN_REQUEST_INTERVAL_MS = 2500;
+let aiRequestInFlight = false;
+let lastAiRequestAt = 0;
 
 async function askAI(question) {
-  const res = await fetch(API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      question,
-      uid: state.currentUser?.uid || null,       // ✅ el UID real del usuario logeado
-      semesterId: state.activeSemesterId || null // ✅ semestre activo
-    }),
-  });
-  const data = await res.json();
-  return data;
+  if (!API_URL) {
+    throw new Error('VITE_AI_API_URL no está configurada.');
+  }
+
+  const cleanQuestion = String(question || '').trim();
+  if (!cleanQuestion) throw new Error('Pregunta vacía.');
+  if (cleanQuestion.length > AI_MAX_QUESTION_CHARS) {
+    throw new Error(`La pregunta supera ${AI_MAX_QUESTION_CHARS} caracteres.`);
+  }
+
+  const now = Date.now();
+  if (aiRequestInFlight) throw new Error('Ya hay una consulta en curso.');
+  if (now - lastAiRequestAt < AI_MIN_REQUEST_INTERVAL_MS) {
+    throw new Error('Espera un momento antes de enviar otra consulta.');
+  }
+
+  aiRequestInFlight = true;
+  lastAiRequestAt = now;
+
+  try {
+    const res = await secureApiFetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        question: cleanQuestion,
+        semesterId: state.activeSemesterId || null,
+      }),
+    });
+
+    if (!res.ok) {
+      const payload = await res.json().catch(() => ({}));
+      const err = new Error(payload?.error || `Error HTTP ${res.status}`);
+      err.status = res.status;
+      throw err;
+    }
+
+    return res.json();
+  } finally {
+    aiRequestInFlight = false;
+  }
 }
 
 function getUid() {
@@ -185,10 +219,10 @@ async function onSend() {
 
   // Acciones sugeridas por el backend
   if (data?.raw?.directive === 'auth_switch') {
-    import('../js/auth.js').then(m => m.aiSwitchAccount?.()).catch(() => {});
+    import('../auth.js').then(m => m.aiSwitchAccount?.()).catch(() => {});
   }
   if (data?.raw?.directive === 'auth_logout') {
-    import('../js/auth.js').then(m => m.aiLogout?.()).catch(() => {});
+    import('../auth.js').then(m => m.aiLogout?.()).catch(() => {});
   }
   if (data?.directive) {
     import('./ui.js').then(m => m.handleDirective?.(data.directive, data.field));

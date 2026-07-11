@@ -1,11 +1,26 @@
 // js/export.js
 import { $, state } from './state.js';
-import html2canvas from 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/+esm';
-import { jsPDF } from 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/+esm';
 import { db } from './firebase.js';
 import {
   collection, doc, getDoc, getDocs, query, orderBy
-} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+} from 'firebase/firestore';
+import { evaluateSafeExpression } from './security/safeExpression.js';
+
+let exportDepsPromise = null;
+
+async function loadExportDeps(){
+  if (!exportDepsPromise) {
+    exportDepsPromise = Promise.all([
+      import('html2canvas'),
+      import('jspdf')
+    ]).then(([html2canvasModule, jspdfModule]) => ({
+      html2canvas: html2canvasModule.default || html2canvasModule,
+      jsPDF: jspdfModule.jsPDF || jspdfModule.default
+    }));
+  }
+  return exportDepsPromise;
+}
+
 
 // Helper: adjunta un listener solo una vez por botón/clave
 function attachOnce(el, evt, fn, key) {
@@ -22,6 +37,7 @@ function safeFilename(s) {
 function getSemLabel() { return state.activeSemesterData?.label || 'semestre'; }
 
 async function nodeToCanvas(node, scale = 2) {
+  const { html2canvas } = await loadExportDeps();
   const prev = node.style.backgroundColor;
   if (!prev) node.style.backgroundColor = getComputedStyle(document.body).backgroundColor || '#111';
   const canvas = await html2canvas(node, {
@@ -53,6 +69,7 @@ export async function exportNodeAsPDF(node, filenameBase) {
     const img = canvas.toDataURL('image/png');
     const pxW = canvas.width, pxH = canvas.height;
     const orientation = (pxW >= pxH) ? 'l' : 'p';
+    const { jsPDF } = await loadExportDeps();
     const pdf = new jsPDF({ unit: 'pt', format: 'a4', orientation });
     const pageW = pdf.internal.pageSize.getWidth();
     const pageH = pdf.internal.pageSize.getHeight();
@@ -95,6 +112,7 @@ export function bindExportButtons() {
 // --- helpers reutilizables ---
 async function captureElement(el) {
   if (!el) throw new Error('No se encontró el elemento a exportar');
+  const { html2canvas } = await loadExportDeps();
   return await html2canvas(el, { scale: 2 });
 }
 
@@ -103,7 +121,7 @@ export async function exportGrades({ format = 'pdf' }) {
   if (!el) throw new Error('No encontré el contenedor de notas');
   const canvas = await captureElement(el);
   if (format === 'png') downloadImage(canvas, 'notas.png');
-  else downloadPDF(canvas, 'notas.pdf');
+  else await downloadPDF(canvas, 'notas.pdf');
   return { ok: true };
 }
 
@@ -112,7 +130,7 @@ export async function exportSchedule({ format = 'pdf' }) {
   if (!el) throw new Error('No encontré el horario');
   const canvas = await captureElement(el);
   if (format === 'png') downloadImage(canvas, 'horario.png');
-  else downloadPDF(canvas, 'horario.pdf');
+  else await downloadPDF(canvas, 'horario.pdf');
   return { ok: true };
 }
 
@@ -121,7 +139,7 @@ export async function exportMalla({ format = 'pdf' }) {
   if (!el) throw new Error('No encontré la malla');
   const canvas = await captureElement(el);
   if (format === 'png') downloadImage(canvas, 'malla.png');
-  else downloadPDF(canvas, 'malla.pdf');
+  else await downloadPDF(canvas, 'malla.pdf');
   return { ok: true };
 }
 
@@ -132,7 +150,8 @@ function downloadImage(canvas, filename) {
   link.click();
 }
 
-function downloadPDF(canvas, filename) {
+async function downloadPDF(canvas, filename) {
+  const { jsPDF } = await loadExportDeps();
   const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [canvas.width, canvas.height] });
   pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, canvas.width, canvas.height);
   pdf.save(filename);
@@ -194,36 +213,13 @@ function grxTruncate(v, scale){
 
 function grxSafeEvalExpr(expr, vars = {}, fns = {}){
   const normalized = grxNormalizeExpr(expr);
-  const masked = normalized.replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/g, '0');
-
-  if (!/^[\w\s\.\+\-\*\/\(\),%<>!=]+$/.test(masked)) {
-    throw new Error('La fórmula contiene caracteres no permitidos.');
-  }
-
-  const e = normalized.replace(/(\d+(?:\.\d+)?)\s*%/g, (_, n) => `(${n}/100)`);
-
-  const ids = (masked.match(/\b[A-Za-z_][A-Za-z0-9_]*\b/g) || []);
-  const builtinFns = new Set(['avg','min','max','final','finalCode','finalId']);
-  const jsWords = new Set(['NaN','Infinity','Math','true','false']);
-
-  const keys = Object.keys(vars);
-  const vals = keys.map(k => vars[k] ?? 0);
-
-  const have = new Set([...keys, ...Object.keys(fns)]);
-  for (const id of ids) {
-    if (builtinFns.has(id) || jsWords.has(id)) continue;
-    if (!have.has(id)) {
-      keys.push(id);
-      vals.push(0);
-      have.add(id);
-    }
-  }
-
-  const fnNames = Object.keys(fns);
-  const fnVals  = Object.values(fns);
-
-  return Function(...fnNames, ...keys, `"use strict"; return (${e});`)(...fnVals, ...vals);
+  return evaluateSafeExpression(normalized, {
+    variables: vars,
+    functions: fns,
+    unknownIdentifierValue: 0
+  });
 }
+
 
 function grxNormStr(s=''){
   return String(s || '')
@@ -521,6 +517,7 @@ function grxDrawSemesterBlock(pdf, report, startY){
 }
 
 async function grxGeneratePdf(universityCode, semesterReports){
+  const { jsPDF } = await loadExportDeps();
   const pdf = new jsPDF({ unit:'pt', format:'a4' });
   const pageWidth = pdf.internal.pageSize.getWidth();
 
