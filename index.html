@@ -2,24 +2,24 @@
 <html lang="es">
 <head>
 
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" defer></script>
-<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 
 
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' https://apis.google.com https://accounts.google.com https://www.google.com https://www.gstatic.com https://www.recaptcha.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://*.googleusercontent.com https://*.gstatic.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://firestore.googleapis.com https://firebaseinstallations.googleapis.com https://content-firebaseappcheck.googleapis.com https://recaptchaenterprise.googleapis.com https://accounts.google.com https://www.google.com https://partyplanner-backend.vercel.app https://*.cloudfunctions.net https://*.run.app; frame-src https://accounts.google.com https://www.google.com https://recaptcha.google.com https://www.recaptcha.net https://*.firebaseapp.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self'; upgrade-insecure-requests">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
 <link rel="icon" type="image/png" href="./assets/gorro-kpGs5SwI.png">
 
 <title>PartyPlanner</title>
 
 
-  <title>PartyPlanner</title>
-
-
 
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    
 
     
     
@@ -54,689 +54,148 @@
     }
 
     
-    
-    
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
 
     
-    
-    
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--bg-base);
-      color: var(--text-primary);
-      line-height: 1.6;
-      overflow-x: hidden;
-      position: relative;
-    }
 
-    
-    
-    
     /* Fondo animado con gradientes */
+    
 
-    
-    
-    
-    body::before {
-      content: '';
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: 
-        radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
-        radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
-        radial-gradient(circle at 40% 40%, rgba(99, 102, 241, 0.2) 0%, transparent 50%);
-      animation: float 20s ease-in-out infinite;
-      z-index: -1;
-    }
-
-    
-    
-    
     @keyframes float {
       0%, 100% { transform: translate(0, 0) rotate(0deg); }
       33% { transform: translate(30px, -30px) rotate(120deg); }
       66% { transform: translate(-20px, 20px) rotate(240deg); }
     }
 
-    
-    
-    
     /* Header mejorado */
+    
 
     
-    
-    
-    header {
-      background: rgba(15, 14, 23, 0.8);
-      backdrop-filter: blur(20px);
-      border-bottom: 1px solid var(--border);
-      padding: 1rem 2rem;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      box-shadow: var(--shadow-lg);
-    }
 
     
-    
-    
-    .header-content {
-      max-width: 1400px;
-      margin: 0 auto;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
 
     
-    
-    
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-size: 1.5rem;
-      font-weight: 800;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
 
-    
-    
-    
-    .brand::before {
-      content: '🎓';
-      font-size: 1.8rem;
-      -webkit-text-fill-color: initial;
-    }
-
-    
-    
-    
     /* Navegación mejorada */
+    
+
+    
+
+    
+
+    
+
+    
 
     
     
     
-    .nav {
-      display: flex;
-      gap: 0.5rem;
-      align-items: center;
-    }
+    
+    
+    
+    
+    
+    
+    
 
-    
-    
-    
-    .nav-tab {
-      position: relative;
-      background: transparent;
-      border: none;
-      color: var(--text-secondary);
-      padding: 0.6rem 1.2rem;
-      border-radius: 12px;
-      cursor: pointer;
-      font-weight: 500;
-      transition: all 0.3s ease;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
 
-    
-    
-    
-    .nav-tab:hover {
-      background: var(--bg-card);
-      color: var(--text-primary);
-      transform: translateY(-2px);
-    }
 
-    
-    
-    
-    .nav-tab.active {
-      background: var(--primary);
-      color: white;
-      box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
-    }
-
-    
-    
-    
-    .nav-tab::before {
-      font-size: 1.2rem;
-    }
-
-    
-    
-    
-    .nav-tab[data-route="#/perfil"]::before { content: '👤'; }
-
-    
-    
-    
-    .nav-tab[data-route="#/semestres"]::before { content: '📚'; }
-
-    
-    
-    
-    .nav-tab[data-route="#/horario"]::before { content: '📅'; }
-
-    
-    
-    
-    .nav-tab[data-route="#/notas"]::before { content: '📊'; }
-
-    
-    
-    
-    .nav-tab[data-route="#/malla"]::before { content: '🗺️'; }
-
-    
-    
-    
-    .nav-tab[data-route="#/progreso"]::before { content: '🏁'; }
-
-    
-    
-    
-    .nav-tab[data-route="#/calendario"]::before { content: '📆'; }
-
-    
-    
-    
-    .nav-tab[data-route="#/asistencia"]::before { content: '📋'; }
-
-    
-    
-    
-    .nav-tab[data-route="#/party"]::before { content: '🎉'; }
-
-    
-    
-    
-    .nav-tab[data-route="#/ayuda"]::before { content: '🆘'; }
-
-    
-    
-    
     /* Botones mejorados */
+    
 
     
-    
-    
-    .btn {
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-      color: white;
-      border: none;
-      padding: 0.7rem 1.5rem;
-      border-radius: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
-    }
 
     
-    
-    
-    .btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
-    }
 
     
-    
-    
-    .btn:active {
-      transform: translateY(0);
-    }
 
     
-    
-    
-    .btn-secondary {
-      background: var(--bg-card);
-      box-shadow: none;
-      border: 1px solid var(--border);
-    }
 
-    
-    
-    
-    .btn-secondary:hover {
-      background: var(--bg-card-hover);
-      box-shadow: var(--shadow-md);
-    }
-
-    
-    
-    
     /* Container principal */
+    
 
-    
-    
-    
-    .container {
-      max-width: 1400px;
-      margin: 2rem auto;
-      padding: 0 2rem;
-    }
-
-    
-    
-    
     /* Cards mejoradas */
+    
 
     
-    
-    
-    .card {
-      background: rgba(255, 255, 255, 0.05);
-      backdrop-filter: blur(10px);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 2rem;
-      box-shadow: var(--shadow-lg);
-      transition: all 0.3s ease;
-      position: relative;
-      overflow: hidden;
-    }
 
     
-    
-    
-    .card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 4px;
-      background: linear-gradient(90deg, var(--primary), var(--accent));
-      opacity: 0.8;
-    }
 
     
-    
-    
-    .card:hover {
-      transform: translateY(-4px);
-      box-shadow: var(--shadow-glow);
-    }
 
     
-    
-    
-    .card h2 {
-      font-size: 1.8rem;
-      font-weight: 700;
-      margin-bottom: 1.5rem;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
 
-    
-    
-    
-    .card h3 {
-      font-size: 1.2rem;
-      font-weight: 600;
-      margin-bottom: 1rem;
-      color: var(--primary-light);
-    }
-
-    
-    
-    
     /* Perfil Section Mejorado */
+    
 
     
-    
-    
-    .profile-section {
-      display: grid;
-      grid-template-columns: 300px 1fr;
-      gap: 2rem;
-    }
 
     
-    
-    
-    .profile-avatar {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 1rem;
-    }
 
     
-    
-    
-    .avatar-circle {
-      width: 150px;
-      height: 150px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--primary), var(--accent));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 4rem;
-      box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
-      position: relative;
-      overflow: hidden;
-    }
 
-    
-    
-    
-    .avatar-circle::after {
-      content: '';
-      position: absolute;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
-      background: linear-gradient(45deg, transparent, rgba(255,255,255,0.3), transparent);
-      animation: shine 3s infinite;
-    }
-
-    
-    
-    
     @keyframes shine {
       0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
       100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
     }
 
     
-    
-    
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 1.5rem;
-    }
 
     
-    
-    
-    .form-field {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
 
     
-    
-    
-    .form-field label {
-      font-weight: 500;
-      color: var(--text-secondary);
-      font-size: 0.9rem;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
 
     
-    
-    
-    .form-field input,
-    .form-field select {
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid var(--border);
-      color: var(--text-primary);
-      padding: 0.8rem 1rem;
-      border-radius: 12px;
-      font-size: 1rem;
-      transition: all 0.3s ease;
-    }
 
-    
-    
-    
     .form-field select option {
   color: #111;         /* texto oscuro para que se vea en el menú */
   background: #fff;    /* fondo claro del menú desplegable */
 }
 
-    
-    
-    
-    .form-field select option:checked,
-.form-field select option:hover {
-  color: #fff;
-  background: var(--primary);
-}
+
+
 
     
-    
-    
-    .form-field input:focus,
-    .form-field select:focus {
-      outline: none;
-      border-color: var(--primary);
-      background: rgba(255, 255, 255, 0.1);
-      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
-    }
 
-    
-    
-    
     /* Horario mejorado */
+    
 
     
-    
-    
-    .schedule-grid {
-      display: grid;
-      grid-template-columns: 80px repeat(5, 1fr);
-      gap: 1rem;
-      background: rgba(255, 255, 255, 0.03);
-      border-radius: 20px;
-      padding: 1.5rem;
-    }
 
     
-    
-    
-    .schedule-header {
-      font-weight: 600;
-      color: var(--primary-light);
-      text-align: center;
-      padding: 1rem;
-      background: rgba(99, 102, 241, 0.1);
-      border-radius: 12px;
-    }
 
     
-    
-    
-    .schedule-cell {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 0.8rem;
-      min-height: 80px;
-      transition: all 0.3s ease;
-      position: relative;
-    }
 
     
-    
-    
-    .schedule-cell:hover {
-      background: rgba(255, 255, 255, 0.08);
-      transform: scale(1.02);
-      box-shadow: var(--shadow-md);
-    }
 
     
-    
-    
-    .course-block {
-      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-      color: white;
-      padding: 0.8rem;
-      border-radius: 10px;
-      font-weight: 500;
-      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
 
-    
-    
-    
-    .course-block:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
-    }
-
-    
-    
-    
     /* Notas Section */
+    
 
     
-    
-    
-    .grades-container {
-      display: grid;
-      gap: 1.5rem;
-    }
 
     
-    
-    
-    .grade-item {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 1rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      transition: all 0.3s ease;
-    }
 
     
-    
-    
-    .grade-item:hover {
-      background: rgba(255, 255, 255, 0.08);
-      transform: translateX(4px);
-    }
 
     
-    
-    
-    .grade-value {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: var(--success);
-    }
 
-    
-    
-    
-    .grade-value.fail {
-      color: var(--danger);
-    }
-
-    
-    
-    
     /* Stats cards */
+    
 
     
-    
-    
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1.5rem;
-      margin-top: 2rem;
-    }
 
     
-    
-    
-    .stat-card {
-      background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(99, 102, 241, 0.05));
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 1.5rem;
-      text-align: center;
-      transition: all 0.3s ease;
-    }
 
     
-    
-    
-    .stat-card:hover {
-      transform: translateY(-4px);
-      box-shadow: var(--shadow-lg);
-    }
 
     
-    
-    
-    .stat-value {
-      font-size: 2.5rem;
-      font-weight: 800;
-      background: linear-gradient(135deg, var(--primary), var(--accent));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
 
-    
-    
-    
-    .stat-label {
-      color: var(--text-secondary);
-      font-size: 0.9rem;
-      margin-top: 0.5rem;
-    }
-
-    
-    
-    
     /* Welcome banner */
+    
 
-    
-    
-    
-    .welcome-banner {
-      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-      border-radius: 20px;
-      padding: 2rem;
-      margin-bottom: 2rem;
-      position: relative;
-      overflow: hidden;
-    }
-
-    
-    
-    
-    .welcome-banner::before {
-  content: '📚';
+.welcome-banner::before {
+  content: "📚";
   position: absolute;
   right: 2rem;
   top: 50%;
@@ -746,63 +205,18 @@
   pointer-events: none; /* 👈 no tapes clics */
 }
 
-    
-    
-    
-    .welcome-title {
-      font-size: 2rem;
-      font-weight: 700;
-      margin-bottom: 0.5rem;
-    }
+
 
     
-    
-    
-    .welcome-subtitle {
-      color: rgba(255, 255, 255, 0.9);
-      font-size: 1.1rem;
-    }
 
     
-    
-    
+
     /* User badge */
+    
 
     
-    
-    
-    .user-badge {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      background: rgba(255, 255, 255, 0.1);
-      padding: 0.5rem 1rem;
-      border-radius: 20px;
-      border: 1px solid var(--border);
-    }
 
-    
-    
-    
-    .user-avatar {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--accent), var(--accent-light));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 600;
-    }
-
-    
-    
-    
     /* Animations */
-
-    
-    
-    
     @keyframes slideIn {
       from {
         opacity: 0;
@@ -815,20 +229,8 @@
     }
 
     
-    
-    
-    .page {
-      animation: slideIn 0.5s ease;
-    }
 
-    
-    
-    
     /* Responsive */
-
-    
-    
-    
     @media (max-width: 768px) {
       .header-content {
         flex-direction: column;
@@ -850,84 +252,23 @@
       }
     }
 
-    
-    
-    
     /* Loading animation */
+    
 
-    
-    
-    
-    .loading {
-      display: inline-block;
-      width: 20px;
-      height: 20px;
-      border: 3px solid var(--border);
-      border-radius: 50%;
-      border-top-color: var(--primary);
-      animation: spin 1s ease-in-out infinite;
-    }
-
-    
-    
-    
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
 
-    
-    
-    
     /* Tooltips */
+    
 
     
-    
-    
-    [data-tooltip] {
-      position: relative;
-    }
 
-    
-    
-    
-    [data-tooltip]:hover::after {
-      content: attr(data-tooltip);
-      position: absolute;
-      bottom: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0, 0, 0, 0.9);
-      color: white;
-      padding: 0.5rem 1rem;
-      border-radius: 8px;
-      font-size: 0.9rem;
-      white-space: nowrap;
-      z-index: 1000;
-      pointer-events: none;
-    }
-
-    
-    
-    
     /* Party section */
+    
 
-    
-    
-    
-    .party-card {
-      background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.05));
-      border: 2px solid var(--accent);
-      border-radius: 20px;
-      padding: 1.5rem;
-      position: relative;
-      overflow: hidden;
-    }
-
-    
-    
-    
-    .party-card::before {
-  content: '🎉';
+.party-card::before {
+  content: "🎉";
   position: absolute;
   right: 1rem;
   top: 1rem;
@@ -936,43 +277,13 @@
   pointer-events: none; /* 👈 no tapes clics */
 }
 
-    
-    
-    
-    .party-status {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(16, 185, 129, 0.2);
-      color: var(--success);
-      padding: 0.5rem 1rem;
-      border-radius: 20px;
-      font-weight: 600;
-    }
+
 
     
-    
-    
-    .party-status::before {
-      content: '✓';
-      width: 20px;
-      height: 20px;
-      background: var(--success);
-      color: white;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
 
     
-    
-    
+
     /* Modal styles */
-
-    
-    
-    
     .modal {
       position: fixed;
       top: 0;
@@ -990,17 +301,11 @@
       transition: opacity 0.3s ease;
     }
 
-    
-    
-    
     .modal.active {
       opacity: 1;
       pointer-events: all;
     }
 
-    
-    
-    
     .modal-content {
       background: var(--bg-base);
       border: 1px solid var(--border);
@@ -1014,207 +319,56 @@
       transition: transform 0.3s ease;
     }
 
-    
-    
-    
     .modal.active .modal-content {
       transform: scale(1);
     }
 
-    
-    
-    
     /* Hidden class */
+    
 
-    
-    
-    
-    .hidden {
-      display: none !important;
-    }
+/* Ocultar el input de archivo del avatar */
 
-    
-    
-    
-    /* Ocultar el input de archivo del avatar */
 
-    
-    
-    
-    #pfAvatarFile {
-  display: none !important;
-}
 
-    
-    
-    
-    .muted { color: var(--text-secondary); font-size: 0.9rem; }
 
-    
-    
-    
-    .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0; }
 
-    
-    
-    
-    /* Hace visible el texto del date input en temas oscuros (Chromium/WebKit) */
+/* Hace visible el texto del date input en temas oscuros (Chromium/WebKit) */
 
-    
-    
-    
-    input[type="date"] {
-  color: var(--text-primary) !important;
-}
 
-    
-    
-    
-    /* Campos internos del control de fecha */
+/* Campos internos del control de fecha */
 
-    
-    
-    
-    input[type="date"]::-webkit-datetime-edit,
-input[type="date"]::-webkit-datetime-edit-text,
-input[type="date"]::-webkit-datetime-edit-month-field,
-input[type="date"]::-webkit-datetime-edit-day-field,
-input[type="date"]::-webkit-datetime-edit-year-field {
-  color: var(--text-primary) !important;
-}
 
-    
-    
-    
-    /* Icono del calendario en tema oscuro */
+/* Icono del calendario en tema oscuro */
 
-    
-    
-    
-    input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(1);
-  opacity: .85;
-}
 
-    
-    
-    
-    /* Forzar visibilidad del texto del control de fecha en navegadores WebKit/Blink */
-
-    
-    
-    
-    input[type="date"] {
+/* Forzar visibilidad del texto del control de fecha en navegadores WebKit/Blink */
+input[type="date"] {
   color: var(--text-primary) !important;
   -webkit-text-fill-color: var(--text-primary) !important; /* clave */
   background-color: rgba(255, 255, 255, 0.08) !important;
   color-scheme: dark; /* usa paleta oscura interna */
 }
 
-    
-    
-    
-    /* Forzar color de las subpartes del control */
+/* Forzar color de las subpartes del control */
 
-    
-    
-    
-    input[type="date"]::-webkit-datetime-edit,
-input[type="date"]::-webkit-datetime-edit-fields-wrapper,
-input[type="date"]::-webkit-datetime-edit-text,
-input[type="date"]::-webkit-datetime-edit-month-field,
-input[type="date"]::-webkit-datetime-edit-day-field,
-input[type="date"]::-webkit-datetime-edit-year-field {
-  color: var(--text-primary) !important;
-  -webkit-text-fill-color: var(--text-primary) !important;
-}
 
-    
-    
-    
-    /* Icono del calendario en tema oscuro */
+/* Icono del calendario en tema oscuro */
 
-    
-    
-    
-    input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(1);
-  opacity: .9;
-}
 
-    
-    
-    
-    /* Forzar visibilidad del texto del date en tema oscuro (Blink/WebKit) */
+/* Forzar visibilidad del texto del date en tema oscuro (Blink/WebKit) */
 
-    
-    
-    
-    #page-perfil .form-field input[type="date"]{
-  color: var(--text-primary) !important;
-  -webkit-text-fill-color: var(--text-primary) !important;
-  background-color: rgba(255, 255, 255, 0.08) !important;
-  color-scheme: dark;
-}
 
-    
-    
-    
-    #page-perfil .form-field input[type="date"]::-webkit-datetime-edit,
-#page-perfil .form-field input[type="date"]::-webkit-datetime-edit-fields-wrapper,
-#page-perfil .form-field input[type="date"]::-webkit-datetime-edit-text,
-#page-perfil .form-field input[type="date"]::-webkit-datetime-edit-month-field,
-#page-perfil .form-field input[type="date"]::-webkit-datetime-edit-day-field,
-#page-perfil .form-field input[type="date"]::-webkit-datetime-edit-year-field{
-  color: var(--text-primary) !important;
-  -webkit-text-fill-color: var(--text-primary) !important;
-}
 
-    
-    
-    
-    #page-perfil .form-field input[type="date"]::-webkit-calendar-picker-indicator{
-  filter: invert(1);
-  opacity: .9;
-}
 
-    
-    
-    
-    /* icono calendario visible en dark mode */
+/* icono calendario visible en dark mode */
 
-    
-    
-    
-    input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(1) opacity(.9);
-  cursor: pointer;
-}
 
-    
-    
-    
-    /* --- FIX DEFINITIVO: asegurar que el valor del date sea visible en dark --- */
 
-    
-    
-    
-    #pfBirthday {
-  color: var(--text-primary) !important;
-  -webkit-text-fill-color: var(--text-primary) !important;
-  background-color: rgba(255, 255, 255, 0.08) !important;
-  color-scheme: dark;
-}
+/* --- FIX DEFINITIVO: asegurar que el valor del date sea visible en dark --- */
 
-    
-    
-    
-    /* El “texto interno” del control (Blink/WebKit) */
 
-    
-    
-    
-    #pfBirthday::-webkit-datetime-edit,
+/* El “texto interno” del control (Blink/WebKit) */
+#pfBirthday::-webkit-datetime-edit,
 #pfBirthday::-webkit-datetime-edit-fields-wrapper,
 #pfBirthday::-webkit-datetime-edit-text,
 #pfBirthday::-webkit-datetime-edit-month-field,
@@ -1225,55 +379,19 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   opacity: 1 !important; /* <- algunos temas bajan la opacidad */
 }
 
-    
-    
-    
-    /* Ícono del calendario legible en dark */
+/* Ícono del calendario legible en dark */
 
-    
-    
-    
-    #pfBirthday::-webkit-calendar-picker-indicator{
-  filter: invert(1);
-  opacity: .95;
-  cursor: pointer;
-}
 
-    
-    
-    
-    /* Evita que un autofill lo pinte transparente */
+/* Evita que un autofill lo pinte transparente */
 
-    
-    
-    
-    #pfBirthday:-webkit-autofill{
-  -webkit-text-fill-color: var(--text-primary) !important;
-  -webkit-box-shadow: 0 0 0px 1000px rgba(255,255,255,0.08) inset !important;
-          box-shadow: 0 0 0px 1000px rgba(255,255,255,0.08) inset !important;
-}
 
-    
-    
-    
-    /* Firefox: mantener esquema oscuro del widget */
-
-    
-    
-    
-    @-moz-document url-prefix() {
+/* Firefox: mantener esquema oscuro del widget */
+@-moz-document url-prefix() {
   #pfBirthday { color-scheme: dark; }
 }
 
-    
-    
-    
-    /* ===== FIX DEFINITIVO PARA #pfBirthday (oscuro y claro) ===== */
-
-    
-    
-    
-    #pfBirthday{
+/* ===== FIX DEFINITIVO PARA #pfBirthday (oscuro y claro) ===== */
+#pfBirthday{
   -webkit-appearance: auto !important;
           appearance: auto !important;
   color-scheme: dark light;                /* usa UI nativa en ambos temas */
@@ -1283,130 +401,44 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   -webkit-text-fill-color: var(--text-primary) !important;
 }
 
-    
-    
-    
-    /* Texto interno del control (Chrome/Safari/Edge) */
+/* Texto interno del control (Chrome/Safari/Edge) */
 
-    
-    
-    
-    #pfBirthday::-webkit-datetime-edit,
-#pfBirthday::-webkit-datetime-edit-fields-wrapper,
-#pfBirthday::-webkit-datetime-edit-text,
-#pfBirthday::-webkit-datetime-edit-month-field,
-#pfBirthday::-webkit-datetime-edit-day-field,
-#pfBirthday::-webkit-datetime-edit-year-field{
-  opacity: 1 !important;
-  color: var(--text-primary) !important;
-  -webkit-text-fill-color: var(--text-primary) !important;
-}
 
-    
-    
-    
-    /* Indicador del calendario visible en dark/light */
+/* Indicador del calendario visible en dark/light */
 
-    
-    
-    
-    #pfBirthday::-webkit-calendar-picker-indicator{
-  filter: invert(1);
-  opacity: 1 !important;
-  cursor: pointer;
-}
 
-    
-    
-    
-    /* Evita que autofill lo deje “transparente” */
+/* Evita que autofill lo deje “transparente” */
 
-    
-    
-    
-    #pfBirthday:-webkit-autofill{
-  -webkit-text-fill-color: var(--text-primary) !important;
-  -webkit-box-shadow: 0 0 0 1000px rgba(255,255,255,.08) inset !important;
-          box-shadow: 0 0 0 1000px rgba(255,255,255,.08) inset !important;
-}
 
-    
-    
-    
-    /* Firefox: fuerza esquema y color */
-
-    
-    
-    
-    @-moz-document url-prefix() {
+/* Firefox: fuerza esquema y color */
+@-moz-document url-prefix() {
   #pfBirthday { color-scheme: dark; color: var(--text-primary) !important; }
 }
 
-    
-    
-    
-    /* separa logo, nav y auth */
-
-    
-    
-    
-    .header-content {
+/* separa logo, nav y auth */
+.header-content {
   gap: 16px;              /* <- espacio horizontal entre brand, nav y auth */
 }
 
-    
-    
-    
-    /* separa el nav del logo por si acaso */
-
-    
-    
-    
-    .nav {
+/* separa el nav del logo por si acaso */
+.nav {
   margin-left: 12px;      /* puedes subirlo a 16/20px si aún se ve muy cerca */
 }
 
-    
-    
-    
-    /* evita que el texto de los tabs se parta y se “meta” en el logo */
+/* evita que el texto de los tabs se parta y se “meta” en el logo */
 
-    
-    
-    
-    .nav-tab {
-  white-space: nowrap;
-}
 
-    
-    
-    
-    /* --- Separación visual entre Reglas y Cálculo --- */
-
-    
-    
-    
-    #gr-rulesCard { 
+/* --- Separación visual entre Reglas y Cálculo --- */
+#gr-rulesCard { 
   margin-bottom: 14px;            /* espacio abajo */
 }
-
-    
-    
-    
-    #gr-calcCard { 
+#gr-calcCard { 
   margin-top: 14px;               /* espacio arriba */
   position: relative;
 }
 
-    
-    
-    
-    /* Línea sutil de separación (opcional, queda elegante) */
-
-    
-    
-    
-    #gr-rulesCard::after {
+/* Línea sutil de separación (opcional, queda elegante) */
+#gr-rulesCard::after {
   content: "";
   display: block;
   height: 1px;
@@ -1415,146 +447,41 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   border-radius: 1px;
 }
 
-    
-    
-    
-    /* --- Header de "Cálculo de notas" con botón a la derecha --- */
+/* --- Header de "Cálculo de notas" con botón a la derecha --- */
 
-    
-    
-    
-    .gr-calcHeader {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
 
-    
-    
-    
-    #gr-openSim.ghost {
-  border: 1px solid rgba(255,255,255,0.15);
-  background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.15));
-  color: #e0e7ff;
-  font-weight: 500;
-  padding: 6px 14px;
-  border-radius: 12px;
-  font-size: 0.9rem;
-  transition: all 0.25s ease;
-  backdrop-filter: blur(4px);
-}
 
-    
-    
-    
-    #gr-openSim.ghost:hover {
-  border-color: rgba(139,92,246,0.6);
-  background: linear-gradient(135deg, rgba(99,102,241,0.3), rgba(139,92,246,0.3));
-  color: #fff;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
-}
 
-    
-    
-    
-    #gr-openSim.ghost:active {
-  transform: scale(0.96);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.3) inset;
-}
 
-    
-    
-    
-    /* (opc) pequeña separación superior al primer input de la fórmula */
 
-    
-    
-    
-    #gr-calcCard .row + .row { margin-top: 8px; }
 
-    
-    
-    
-    .sim-lock {
-  overflow: hidden !important;
-  overscroll-behavior: none;
-}
 
-    
-    
-    
-    .progress-inner{height:100%;
-  background:linear-gradient(90deg, var(--primary, #22c55e), var(--accent, #3b82f6));
-}
+/* (opc) pequeña separación superior al primer input de la fórmula */
 
-    
-    
-    
-    .export-bar {
-  display:flex; gap:8px; margin:8px 0 12px;
-}
 
-    
-    
-    
-    @media print {
+
+
+
+
+
+
+@media print {
   nav, .nav, .export-bar, #pfActions { display:none !important; }
   body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 
-    
-    
-    
-    .block-del-btn {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  background: rgba(0,0,0,0.55);
-  color: #fff;
-  border: none;
-  font-size: 12px;
-  line-height: 1;
-  padding: 2px 6px;
-  border-radius: 4px;
-  cursor: pointer;
-  display: none;
-  z-index: 2;
-}
 
-    
-    
-    
-    .placed:hover .block-del-btn {
-  display: block;
-}
 
-    
-    
-    
-    .block-del-btn:hover {
+
+
+.block-del-btn:hover {
   background: rgba(239, 68, 68, 0.85); /* rojo suave */
 }
 
-    
-    
-    
-    /* --- Preview general --- */
+/* --- Preview general --- */
 
-    
-    
-    
-    .cell.slot.over::after {
-  content: "";
-  position: absolute;
-  pointer-events: none;
-  border: 2px dashed rgba(255,255,255,0.6);
-}
 
-    
-    
-    
-    .cell.slot.over.hint-top::after {
+.cell.slot.over.hint-top::after {
   content: "";
   position: absolute;
   left: var(--pad);
@@ -1565,24 +492,9 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   pointer-events: none;
 }
 
-    
-    
-    
-    .cell.slot.over.hint-full::after {
-  content: "";
-  position: absolute;
-  top: var(--pad);
-  bottom: var(--pad);
-  left: var(--pad);
-  right: var(--pad);
-  border: 2px dashed rgba(255,255,255,0.6);
-  pointer-events: none;
-}
 
-    
-    
-    
-    .cell.slot.over.hint-bottom::after {
+
+.cell.slot.over.hint-bottom::after {
   content: "";
   position: absolute;
   left: var(--pad);
@@ -1593,103 +505,25 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   pointer-events: none;
 }
 
-    
-    
-    
-    /* --- Horizontales --- */
 
-    
-    
-    
-    .cell.slot.over.hint-left::after {
-  top: var(--pad);
-  bottom: var(--pad);
-  left: var(--pad);
-  right: 50%;
-}
+/* --- Horizontales --- */
 
-    
-    
-    
-    .cell.slot.over.hint-right::after {
-  top: var(--pad);
-  bottom: var(--pad);
-  left: 50%;
-  right: var(--pad);
-}
 
-    
-    
-    
-    .cell.slot.over.hint-bottom.hint-left::after {
-  top: 50%;
-  left: var(--pad);
-  right: 50%;
-  bottom: var(--pad);
-}
 
-    
-    
-    
-    .cell.slot.over.hint-bottom.hint-right::after {
-  top: 50%;
-  left: 50%;
-  right: var(--pad);
-  bottom: var(--pad);
-}
 
-    
-    
-    
-    .att-days {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  padding: 6px 0;
-}
 
-    
-    
-    
-    .att-record {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 4px 8px;
-  white-space: nowrap;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
 
-    
-    
-    
-    .btn-del-att {
-  font-size: 0.8rem;
-  padding: 2px 6px;
-  background: rgba(239,68,68,0.8);
-  border-radius: 6px;
-  cursor: pointer;
-}
 
-    
-    
-    
-    /* Oculta nombre e icono en el menú superior */
 
-    
-    
-    
-    #userMenuName,
-#userMenuAvatar {
-  display: none !important;
-}
 
-    
-    
-    
-    #page-malla .malla-grid {
+
+
+
+
+/* Oculta nombre e icono en el menú superior */
+
+
+#page-malla .malla-grid {
   display: grid;
   grid-template-columns: repeat(10, 1fr);
   grid-auto-flow: column;
@@ -1697,49 +531,16 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   padding: 10px;
 }
 
-    
-    
-    
-    #page-malla .grid-item {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  border-radius: 10px;
-  cursor: pointer;
-  overflow: hidden;
-  padding: 28px 10px;
-  box-shadow: inset 0 0 0 2px rgba(0,0,0,.18);
-}
 
-    
-    
-    
-    #page-malla .grid-item::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(0,0,0,0.18), transparent 22%, transparent 78%, rgba(0,0,0,0.18));
-  pointer-events: none;
-}
 
-    
-    
-    
-    #page-malla .grid-item:hover {
+
+
+#page-malla .grid-item:hover {
   transform: translateY(-2px);
 }
 
-    
-    
-    
-    /* Ajusta el texto interno para que se vea equilibrado */
-
-    
-    
-    
-    #page-malla .grid-item .course-name {
+/* Ajusta el texto interno para que se vea equilibrado */
+#page-malla .grid-item .course-name {
   font-size: 0.78rem;
   line-height: 1.15;
   text-align: center;
@@ -1751,196 +552,53 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   overflow: hidden;
 }
 
-    
-    
-    
-    #page-malla .grid-item .course-name {
+#page-malla .grid-item .course-name {
   font-size: 0.8rem; /* antes usaba clamp(...), podés fijarlo */
   line-height: 1.2;
 }
 
-    
-    
-    
-    /* ====== AYUDA ====== */
 
-    
-    
-    
-    #page-ayuda details {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  margin: 12px 0;
-  padding: 12px 16px;
-  cursor: pointer;
-  transition: background 0.25s ease;
-}
+/* ====== AYUDA ====== */
 
-    
-    
-    
-    #page-ayuda details:hover {
-  background: rgba(255,255,255,0.08);
-}
 
-    
-    
-    
-    #page-ayuda summary {
-  font-weight: 600;
-  color: var(--primary-light);
-  font-size: 1.1rem;
-  list-style: none;
-}
 
-    
-    
-    
-    #page-ayuda summary::marker,
-#page-ayuda summary::-webkit-details-marker {
-  display: none;
-}
 
-    
-    
-    
-    #page-ayuda summary::after {
-  content: "›";
-  float: right;
-  transform: rotate(90deg);
-  transition: transform 0.25s ease;
-}
 
-    
-    
-    
-    #page-ayuda details[open] summary::after {
-  transform: rotate(270deg);
-}
 
-    
-    
-    
-    .help-subsection {
-  margin-top: 8px;
-  padding-left: 8px;
-}
 
-    
-    
-    
-    .help-subsection h4 {
-  color: var(--accent-light);
-  font-size: 0.95rem;
-  margin-top: 8px;
-  margin-bottom: 4px;
-}
 
-    
-    
-    
-    .help-subsection ul {
-  list-style: none;
-  padding-left: 0;
-  margin: 0 0 8px 0;
-}
 
-    
-    
-    
-    .help-subsection li {
-  background: rgba(255,255,255,0.04);
-  border-radius: 8px;
-  margin: 3px 0;
-  padding: 6px 10px;
-  font-size: 0.9rem;
-}
 
-    
-    
-    
-    .help-subsection code {
-  color: var(--primary-light);
-  background: rgba(255,255,255,0.1);
-  border-radius: 4px;
-  padding: 2px 6px;
-  font-family: monospace;
-}
 
-    
-    
-    
-    /* === Colores para los botones del modal de asistencia === */
 
-    
-    
-    
-    .att-present {
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-  color: white;
-}
 
-    
-    
-    
-    .att-absent {
-  background: linear-gradient(135deg, #dc2626, #b91c1c);
-  color: #fff;
-}
 
-    
-    
-    
-    .att-justified {
-  background: linear-gradient(135deg, #fbbf24, #f59e0b);
-  color: #111;
-  font-weight: 600;
-}
 
-    
-    
-    
-    .att-noclass {
-  background: linear-gradient(135deg, #ef4444, #7f1d1d);
-  color: #fff;
-  opacity: 0.85;
-}
 
-    
-    
-    
-    /* Efecto hover */
 
-    
-    
-    
-    .att-present:hover,
-.att-absent:hover,
-.att-justified:hover,
-.att-noclass:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 3px 10px rgba(0,0,0,0.3);
-}
 
-    
-    
-    
-    .placed.dragging {
-  opacity: 0.7;
-  transform: scale(1.05);
-  transition: transform 0.15s ease;
-}
 
-    
-    
-    
-    /* === Horario continuo (tipo Google Calendar) === */
 
-    
-    
-    
-    .timeline {
+
+
+
+/* === Colores para los botones del modal de asistencia === */
+
+
+
+
+
+
+
+
+/* Efecto hover */
+
+
+
+
+
+/* === Horario continuo (tipo Google Calendar) === */
+.timeline {
   display: grid;
   grid-template-columns: 60px repeat(5, 1fr);
   background: rgba(255,255,255,0.05);
@@ -1950,10 +608,7 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   height: 1000px; /* ajusta altura si quieres */
 }
 
-    
-    
-    
-    .timeline-hour {
+.timeline-hour {
   position: relative;
   height: calc(1000px / 14); /* 14 horas: 8:00-22:00 */
   border-bottom: 1px solid rgba(255,255,255,0.08);
@@ -1962,85 +617,28 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   padding-left: 6px;
 }
 
-    
-    
-    
-    .timeline-day {
-  position: relative;
-  border-left: 1px solid rgba(255,255,255,0.08);
-}
 
-    
-    
-    
-    .timeline-block {
-  position: absolute;
-  left: 6%;
-  right: 6%;
-  border-radius: 8px;
-  color: white;
-  padding: 4px 6px;
-  font-size: 0.8rem;
-  overflow: hidden;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-}
 
-    
-    
-    
-    .cal-evt {
-  position: relative;
-  border-radius: 6px;
-  margin: 2px 0;
-  padding: 4px 6px;
-  font-size: 0.85rem;
-  transition: transform 0.1s ease;
-}
 
-    
-    
-    
-    .cal-evt:hover {
-  transform: scale(1.02);
-}
 
-    
-    
-    
-    .cal-evt .cal-del:hover {
-  color: red !important;
-}
 
-    
-    
-    
-    .grade-item.dragging {
-  opacity: 0.7;
-  transform: scale(1.03);
-  background: rgba(99, 102, 241, 0.15);
-  border: 1px dashed var(--primary);
-}
 
-    
-    
-    
-    .grade-item {
-  transition: transform 0.15s ease, background 0.15s ease;
-}
 
-    
-    
-    
-    .party-members-grid {
+
+
+
+
+
+
+
+
+.party-members-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 1rem;
 }
 
-    
-    
-    
-    .party-member-card {
+.party-member-card {
   background: rgba(255,255,255,0.05);
   border: 1px solid var(--border);
   backdrop-filter: blur(8px);
@@ -2052,18 +650,12 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   transition: all .25s ease;
 }
 
-    
-    
-    
-    .party-member-card:hover {
+.party-member-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 6px 20px rgba(0,0,0,0.3);
 }
 
-    
-    
-    
-    .party-member-icon {
+.party-member-icon {
   width: 48px;
   height: 48px;
   border-radius: 50%;
@@ -2077,26 +669,17 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   text-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
 
-    
-    
-    
-    .party-member-info {
+.party-member-info {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-    
-    
-    
-    .party-member-info code {
+.party-member-info code {
   display: none;
 }
 
-    
-    
-    
-    .kick-btn {
+.kick-btn {
   padding: 4px 10px;
   font-size: 0.8rem;
   background: rgba(255, 80, 80, 0.25);
@@ -2108,18 +691,12 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   transition: 0.15s;
 }
 
-    
-    
-    
-    .kick-btn:hover {
+.kick-btn:hover {
   background: rgba(255, 80, 80, 0.45);
   color: white;
 }
 
-    
-    
-    
-    .host-badge {
+.host-badge {
   margin-left: 10px;
   background: linear-gradient(135deg, #ffffff, #fda085);
   color: #111;
@@ -2134,10 +711,7 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   box-shadow: 0 2px 6px rgba(0,0,0,0.25);
 }
 
-    
-    
-    
-    .transfer-btn {
+.transfer-btn {
   padding: 4px 10px;
   font-size: 0.8rem;
   background: rgba(255, 200, 0, 0.25);
@@ -2149,18 +723,12 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   transition: 0.15s;
 }
 
-    
-    
-    
-    .transfer-btn:hover {
+.transfer-btn:hover {
   background: rgba(255, 200, 0, 0.45);
   color: white;
 }
 
-    
-    
-    
-    .conn-dot {
+.conn-dot {
   display:inline-block;
   width:10px;
   height:10px;
@@ -2168,49 +736,30 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   margin-right:6px;
 }
 
-    
-    
-    
-    .conn-dot.on {
+.conn-dot.on {
   background:#10b981;      /* VERDE */
   box-shadow:0 0 6px #10b981;
 }
 
-    
-    
-    
-    .conn-dot.off {
+.conn-dot.off {
   background:#555;
   opacity:0.6;
 }
 
-    
-    
-    
-    .conn-dot.on {
+.conn-dot.on {
   background:#10b981;
   box-shadow:0 0 6px #10b981;
   animation: pulseOnline 1.4s infinite ease-in-out;
 }
 
-    
-    
-    
-    @keyframes pulseOnline {
+@keyframes pulseOnline {
   0%   { transform: scale(.9); opacity:.8; }
   50%  { transform: scale(1.15); opacity:1; }
   100% { transform: scale(.9); opacity:.8; }
 }
 
-    
-    
-    
-    /* Quitar subrayado a los tabs (links) */
-
-    
-    
-    
-    .nav a.nav-tab,
+/* Quitar subrayado a los tabs (links) */
+.nav a.nav-tab,
 .nav a.nav-tab:visited,
 .nav a.nav-tab:hover,
 .nav a.nav-tab:focus,
@@ -2219,30 +768,17 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   color: inherit; /* opcional: evita colores típicos de links */
 }
 
-    
-    
-    
-    /* ===== Simulador: chips rectangulares bonitos ===== */
 
-    
-    
-    
-    #simPaletteHost{
+/* ===== Simulador: chips rectangulares bonitos ===== */
+#simPaletteHost{
   display:flex;
   flex-wrap:wrap;
   gap:10px;
   align-items:center;
 }
 
-    
-    
-    
-    /* contenedor */
-
-    
-    
-    
-    #simPaletteHost .palette-rect{
+/* contenedor */
+#simPaletteHost .palette-rect{
   display:inline-flex;
   align-items:center;
   gap:10px;
@@ -2267,15 +803,8 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   max-width: 260px;
 }
 
-    
-    
-    
-    /* texto */
-
-    
-    
-    
-    #simPaletteHost .palette-rect .label{
+/* texto */
+#simPaletteHost .palette-rect .label{
   min-width:0;
   white-space:nowrap;
   overflow:hidden;
@@ -2283,15 +812,8 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   opacity:.95;
 }
 
-    
-    
-    
-    /* botón flecha */
-
-    
-    
-    
-    #simPaletteHost .palette-rect .add-par{
+/* botón flecha */
+#simPaletteHost .palette-rect .add-par{
   margin-left:10px;
   height:30px;
   width:34px;
@@ -2311,45 +833,21 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   cursor:pointer;
 }
 
-    
-    
-    
-    /* hover suave */
-
-    
-    
-    
-    #simPaletteHost .palette-rect:hover{
+/* hover suave */
+#simPaletteHost .palette-rect:hover{
   transform: translateY(-1px);
   filter: brightness(1.03);
 }
-
-    
-    
-    
-    #simPaletteHost .palette-rect:active{
+#simPaletteHost .palette-rect:active{
   transform: translateY(0px);
 }
 
-    
-    
-    
-    /* evita que algo global los haga "píldora 9999px" */
+/* evita que algo global los haga "píldora 9999px" */
+#simPaletteHost .palette-rect{ border-radius:14px !important; }
 
-    
-    
-    
-    #simPaletteHost .palette-rect{ border-radius:14px !important; }
 
-    
-    
-    
-    /* ===== Exportar notas PDF ===== */
-
-    
-    
-    
-    .pdf-export-modal {
+/* ===== Exportar notas PDF ===== */
+.pdf-export-modal {
   width: min(860px, 92vw);
   max-width: 860px;
   background: linear-gradient(180deg, rgba(14,16,40,.98), rgba(10,11,31,.98));
@@ -2362,62 +860,41 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   z-index: 1001;
 }
 
-    
-    
-    
-    .pdf-export-header {
+.pdf-export-header {
   margin-bottom: 18px;
 }
 
-    
-    
-    
-    .pdf-export-title {
+.pdf-export-title {
   margin: 0 0 8px;
   font-size: 2rem;
   font-weight: 800;
   line-height: 1.1;
 }
 
-    
-    
-    
-    .pdf-export-subtitle {
+.pdf-export-subtitle {
   margin: 0;
   color: rgba(255,255,255,.72);
   font-size: 0.98rem;
   line-height: 1.45;
 }
 
-    
-    
-    
-    .pdf-export-body {
+.pdf-export-body {
   display: grid;
   gap: 20px;
 }
 
-    
-    
-    
-    .pdf-export-field {
+.pdf-export-field {
   display: grid;
   gap: 10px;
 }
 
-    
-    
-    
-    .pdf-export-label {
+.pdf-export-label {
   font-size: 1rem;
   font-weight: 700;
   color: #e9ecff;
 }
 
-    
-    
-    
-    .pdf-export-row {
+.pdf-export-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2425,10 +902,7 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   flex-wrap: wrap;
 }
 
-    
-    
-    
-    .pdf-export-select {
+.pdf-export-select {
   min-width: 180px;
   max-width: 240px;
   padding: 12px 14px;
@@ -2440,18 +914,12 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   outline: none;
 }
 
-    
-    
-    
-    .pdf-export-select:focus {
+.pdf-export-select:focus {
   border-color: rgba(99, 148, 255, .7);
   box-shadow: 0 0 0 4px rgba(99,148,255,.14);
 }
 
-    
-    
-    
-    .pdf-export-semesters {
+.pdf-export-semesters {
   display: grid;
   gap: 10px;
   max-height: 260px;
@@ -2462,10 +930,7 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   background: rgba(255,255,255,.03);
 }
 
-    
-    
-    
-    .pdf-sem-item {
+.pdf-sem-item {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -2477,35 +942,23 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   cursor: pointer;
 }
 
-    
-    
-    
-    .pdf-sem-item:hover {
+.pdf-sem-item:hover {
   background: rgba(255,255,255,.06);
   border-color: rgba(255,255,255,.08);
 }
 
-    
-    
-    
-    .pdf-sem-item input[type="checkbox"] {
+.pdf-sem-item input[type="checkbox"] {
   width: 18px;
   height: 18px;
   accent-color: #5ea2ff;
 }
 
-    
-    
-    
-    .pdf-sem-item span {
+.pdf-sem-item span {
   font-size: 1rem;
   color: #f3f5ff;
 }
 
-    
-    
-    
-    .pdf-export-secondary,
+.pdf-export-secondary,
 .pdf-export-cancel,
 .pdf-export-confirm {
   border: none;
@@ -2517,46 +970,31 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   transition: transform .15s ease, opacity .15s ease, box-shadow .15s ease;
 }
 
-    
-    
-    
-    .pdf-export-secondary:hover,
+.pdf-export-secondary:hover,
 .pdf-export-cancel:hover,
 .pdf-export-confirm:hover {
   transform: translateY(-1px);
 }
 
-    
-    
-    
-    .pdf-export-secondary {
+.pdf-export-secondary {
   background: rgba(255,255,255,.04);
   color: #eef2ff;
   border: 1px solid rgba(255,255,255,.08);
 }
 
-    
-    
-    
-    .pdf-export-cancel {
+.pdf-export-cancel {
   background: rgba(255,255,255,.03);
   color: #eef2ff;
   border: 1px solid rgba(255,255,255,.10);
 }
 
-    
-    
-    
-    .pdf-export-confirm {
+.pdf-export-confirm {
   background: linear-gradient(135deg, #63a6ff, #3c7dff);
   color: white;
   box-shadow: 0 8px 22px rgba(61,125,255,.28);
 }
 
-    
-    
-    
-    .pdf-export-footer {
+.pdf-export-footer {
   margin-top: 24px;
   display: flex;
   justify-content: flex-end;
@@ -2564,15 +1002,9 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   flex-wrap: wrap;
 }
 
-    
-    
-    
-    /* ===== Día actual en calendario ===== */
 
-    
-    
-    
-    .cal-cell.day.cal-today {
+/* ===== Día actual en calendario ===== */
+.cal-cell.day.cal-today {
   position: relative;
   border: 1px solid rgba(250, 204, 21, .95) !important;
   box-shadow:
@@ -2583,10 +1015,7 @@ input[type="date"]::-webkit-datetime-edit-year-field {
     rgba(15, 23, 42, .88) !important;
 }
 
-    
-    
-    
-    .cal-cell.day.cal-today::after {
+.cal-cell.day.cal-today::after {
   content: "";
   position: absolute;
   top: 9px;
@@ -2599,10 +1028,7 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   pointer-events: none;
 }
 
-    
-    
-    
-    .cal-daytop {
+.cal-daytop {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2610,18 +1036,12 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   margin-bottom: 4px;
 }
 
-    
-    
-    
-    .cal-cell.day.cal-today .cal-daynum {
+.cal-cell.day.cal-today .cal-daynum {
   color: #fde68a;
   font-weight: 900;
 }
 
-    
-    
-    
-    .cal-today-badge {
+.cal-today-badge {
   font-size: 11px;
   font-weight: 900;
   line-height: 1;
@@ -2632,14 +1052,14 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   box-shadow: 0 0 14px rgba(250, 204, 21, .35);
 }
 
-    
-    
-    
-    /*termina*/
+
+/*termina*/
 
   </style>
-  <script type="module" crossorigin src="./assets/index-DMgELTCP.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-h9HuYpRP.css">
+  <script type="module" crossorigin src="./assets/index-CFfnISX6.js"></script>
+  <link rel="modulepreload" crossorigin href="./assets/rolldown-runtime-QTnfLwEv.js">
+  <link rel="modulepreload" crossorigin href="./assets/index.esm-DxDnhweQ.js">
+  <link rel="stylesheet" crossorigin href="./assets/index-Bm12QcyO.css">
 </head>
 
 
@@ -2716,8 +1136,7 @@ input[type="date"]::-webkit-datetime-edit-year-field {
 
       <div class="form-field">
         <label for="pfBirthday">Fecha de nacimiento</label>
-        <input id="pfBirthday" type="date" inputmode="none"
-       onkeydown="return false" onpaste="return false" />
+        <input id="pfBirthday" type="date" inputmode="none" />
 
       </div>
 
@@ -2761,6 +1180,26 @@ input[type="date"]::-webkit-datetime-edit-year-field {
         <input id="pfPhone" type="tel" placeholder="+56 9 1234 5678" />
       </div>
     </div>
+  </div>
+
+  <div class="security-device-card" aria-labelledby="securityDeviceTitle">
+    <div>
+      <h3 id="securityDeviceTitle">🔒 Seguridad de este dispositivo</h3>
+      <p class="muted">
+        Por defecto PartyPlanner mantiene los datos de Firestore solo en memoria. Activa el modo confiable únicamente en un computador personal.
+      </p>
+    </div>
+
+    <label class="security-device-toggle">
+      <input id="pfTrustedDevice" type="checkbox" />
+      <span>Confiar en este dispositivo y permitir caché sin conexión</span>
+    </label>
+
+    <div id="pfTrustedDeviceStatus" class="muted" aria-live="polite"></div>
+
+    <button id="pfClearLocalCache" class="btn btn-secondary" type="button">
+      Borrar caché local de Firestore
+    </button>
   </div>
 
   <div id="pfActions" style="margin-top: 2rem; display: flex; gap: 1rem;">
