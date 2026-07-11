@@ -6,20 +6,58 @@ import { preloadCourses } from './semesters.js'; // ✅ nuevo
 import {
   GoogleAuthProvider,
   signInWithPopup,
-  signInWithRedirect,
   // getRedirectResult,  // ya no lo necesitamos aquí
   onAuthStateChanged,
   signOut,
-} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+} from 'firebase/auth';
 
-import { doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 import { $, state, updateDebug } from './state.js';
-import { listenProfile, reflectProfileInSemestersUI } from './profile.js';
 import { loadMyPair } from './pair.js';
 import { clearActiveSemester, refreshSemestersSub } from './semesters.js'; // ⬅️ importante
-import { clearProfileUI } from './profile.js';
 import { stopSemestersSub} from './semesters.js';
+
+let profileModulePromise = null;
+
+function getProfileModule(){
+  if (!profileModulePromise) {
+    profileModulePromise = import('./profile.js');
+  }
+  return profileModulePromise;
+}
+
+
+const PRESENCE_HEARTBEAT_MS = 90_000;
+let presenceTimer = null;
+let presenceVisibilityBound = false;
+
+function stopPresenceHeartbeat(){
+  if (presenceTimer) {
+    clearInterval(presenceTimer);
+    presenceTimer = null;
+  }
+}
+
+function startPresenceHeartbeat(){
+  stopPresenceHeartbeat();
+
+  setOnlineStatus(true).catch(() => {});
+  presenceTimer = setInterval(() => {
+    if (document.visibilityState === 'visible') {
+      setOnlineStatus(true).catch(() => {});
+    }
+  }, PRESENCE_HEARTBEAT_MS);
+
+  if (!presenceVisibilityBound) {
+    presenceVisibilityBound = true;
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && state.currentUser) {
+        setOnlineStatus(true).catch(() => {});
+      }
+    });
+  }
+}
 
 function setNonProfileTabsDisabled(disabled) {
   document.querySelectorAll('.nav-tab[data-route]').forEach(btn => {
@@ -72,7 +110,13 @@ const setAuthLoading = (loading) => {
   if (createPairBtn) createPairBtn.disabled = true;
 
   state.profileData = null;
-  reflectProfileInSemestersUI();
+
+  // Fase 4: esta función vive en profile.js y ahora se carga de forma lazy.
+  // No puede llamarse como símbolo global, porque provoca pageerror en usuarios sin sesión.
+  getProfileModule()
+    .then(profileModule => profileModule.reflectProfileInSemestersUI?.())
+    .catch(() => {});
+
   clearActiveSemester();
   const semList = $('semestersList');
   if (semList) semList.innerHTML = '';
@@ -125,6 +169,8 @@ if (switchBtn) {
   provider.setCustomParameters({ prompt: 'select_account' });
 
   try {
+    await setOnlineStatus(false);
+    stopPresenceHeartbeat();
     await signOut(auth);
     // limpia UI al tiro (tu código de limpieza aquí)…
 
@@ -159,6 +205,8 @@ if (signOutBtn) {
   signOutBtn.addEventListener('click', async () => {
     setAuthLoading(true);
     try {
+      await setOnlineStatus(false);
+      stopPresenceHeartbeat();
       await signOut(auth);
 
       // 🔻 corta TODO y limpia UI al instante
@@ -167,7 +215,8 @@ if (signOutBtn) {
       state.unsubscribeProfile?.(); state.unsubscribeProfile = null; // perfil
       stopSemestersSub?.();                                         // semestres
       clearActiveSemester();
-      clearProfileUI();
+      const profileModule = await getProfileModule();
+      profileModule.clearProfileUI?.();
       showSignedOut();
       updateDebug();
 
@@ -185,18 +234,7 @@ onAuthStateChanged(auth, async (user) => {
   setAuthLoading(false);
 
   if (user) {
-    if (!window.__heartbeat) {
-  window.__heartbeat = setInterval(() => {
-    setOnlineStatus(true);
-  }, 2000);
-}
-
-
     state.currentUser = user;
-
-    // 🔥 Ahora que user existe → recién aquí marcamos conectado
-    await setOnlineStatus(true);
-
     showSignedIn(user.displayName || user.email || user.uid);
 
     try {
@@ -204,6 +242,10 @@ onAuthStateChanged(auth, async (user) => {
     } catch (e) {
       console.error('ensureUserDoc failed:', e);
     }
+
+    // Presencia moderada: actualización inmediata + heartbeat cada 90 s.
+    // Se inicia después de asegurar que el documento del usuario existe.
+    startPresenceHeartbeat();
 
     try {
       await preloadCourses();
@@ -213,8 +255,9 @@ onAuthStateChanged(auth, async (user) => {
     }
 
     try {
-      listenProfile();
-      reflectProfileInSemestersUI();
+      const profileModule = await getProfileModule();
+      profileModule.listenProfile?.();
+      profileModule.reflectProfileInSemestersUI?.();
     } catch (e) {
       console.error('profile listen failed:', e);
     }
@@ -228,23 +271,14 @@ onAuthStateChanged(auth, async (user) => {
     }, 1500);
 
     setTimeout(() => {
-      import('./profile.js')
+      getProfileModule()
         .then(m => m.mountPartnerProfileCard?.())
         .catch(() => {});
     }, 2500);
 
     updateDebug();
   } else {
-
-    if (window.__heartbeat) {
-  clearInterval(window.__heartbeat);
-  window.__heartbeat = null;
-}
-
-    if (state.currentUser) {
-  await setOnlineStatus(false);
-}
-
+    stopPresenceHeartbeat();
     state.currentUser = null;
     showSignedOut();
     updateDebug();
@@ -281,13 +315,19 @@ async function ensureUserDoc(user) {
 }
 
 export async function aiLogout() {
-  try { await signOut(auth); } catch (e) { console.error(e); }
+  try {
+    await setOnlineStatus(false);
+    stopPresenceHeartbeat();
+    await signOut(auth);
+  } catch (e) { console.error(e); }
 }
 
 export async function aiSwitchAccount() {
   try {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
+    await setOnlineStatus(false);
+    stopPresenceHeartbeat();
     await signOut(auth);
     await signInWithPopup(auth, provider);
   } catch (e) { console.error(e); }

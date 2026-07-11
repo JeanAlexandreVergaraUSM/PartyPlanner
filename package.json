@@ -1,15 +1,49 @@
 {
-  "name": "duoplanner",
+  "name": "partyplanner",
   "version": "1.0.0",
-  "description": "App universitaria DuoPlanner",
+  "type": "module",
+  "description": "App web universitaria PartyPlanner",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "deploy": "npm run build && gh-pages -d dist"
+    "deploy": "npm run build && gh-pages -d dist",
+    "lint": "eslint .",
+    "security:smoke": "node scripts/security-smoke.mjs",
+    "resource:smoke": "node scripts/resource-smoke.mjs",
+    "defense:smoke": "node scripts/defense-smoke.mjs",
+    "test:unit": "vitest run tests/unit",
+    "test:unit:watch": "vitest tests/unit",
+    "test:coverage": "vitest run tests/unit --coverage",
+    "test:rules": "vitest run tests/rules",
+    "test:rules:emulator": "firebase emulators:exec --project demo-partyplanner --only firestore \"npm run test:rules\"",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:install": "playwright install chromium",
+    "test:ci": "npm run lint && npm run test:unit && npm run test:rules:emulator && npm run build && npm run test:e2e",
+    "verify": "npm run security:smoke && npm run resource:smoke && npm run defense:smoke && npm run quality:smoke && npm run lint && npm run test:unit && npm run build",
+    "quality:smoke": "node scripts/quality-smoke.mjs"
   },
   "devDependencies": {
-    "vite": "^5.0.0",
-    "gh-pages": "^6.0.0"
+    "@eslint/js": "^10.0.1",
+    "@firebase/rules-unit-testing": "^5.0.1",
+    "@playwright/test": "^1.61.1",
+    "@vitest/coverage-v8": "^4.1.10",
+    "eslint": "^10.6.0",
+    "firebase-tools": "^15.23.0",
+    "gh-pages": "^6.0.0",
+    "globals": "^17.7.0",
+    "jsdom": "^29.1.1",
+    "vite": "^8.1.4",
+    "vitest": "^4.1.10"
+  },
+  "dependencies": {
+    "firebase": "^12.15.0",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
   }
 }

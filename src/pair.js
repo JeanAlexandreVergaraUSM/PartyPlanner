@@ -3,9 +3,19 @@ import { db } from './firebase.js';
 import {
   collection, doc, setDoc, getDoc, getDocs,
   updateDoc, arrayUnion, arrayRemove, query,
-  deleteDoc, onSnapshot
-} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+  deleteDoc, onSnapshot, where
+} from 'firebase/firestore';
 import { $, state, updateDebug } from './state.js';
+import { escapeHtml, escapeAttr, safeHexColor, safeImageDataUrl } from './security/html.js';
+
+function showToast(message, type = 'info') {
+  const text = String(message || '');
+  if (typeof window !== 'undefined' && typeof window.showToast === 'function') {
+    window.showToast(text, type);
+    return;
+  }
+  console[type === 'error' ? 'warn' : 'log'](text);
+}
 
 let unsubPartyDoc = null;
 let memberUnsubs = {};
@@ -44,74 +54,66 @@ function prettyDate(iso) {
 
 
 function renderPartyMemberCard(d, uid) {
-  const name = d.name || d.fullName || "Usuario";
-  const uni  = prettyUni(d);
-  const car  = prettyCareer(d);
-  const bday = prettyDate(d.birthday);
-  const emailUni = d.uniEmail || "—";
-  const phone = d.phone || "—";
-  const favColor = d.favoriteColor || "#6366f1";
+  const rawName = d.name || d.fullName || 'Usuario';
+  const name = escapeHtml(rawName);
+  const uni = escapeHtml(prettyUni(d));
+  const car = escapeHtml(prettyCareer(d));
+  const bday = escapeHtml(prettyDate(d.birthday));
+  const emailUni = escapeHtml(d.uniEmail || '—');
+  const phone = escapeHtml(d.phone || '—');
+  const favColor = safeHexColor(d.favoriteColor, '#6366f1');
+  const safeUid = escapeAttr(uid);
+  const avatarData = safeImageDataUrl(d.avatarData);
 
-  const avatar = d.avatarData
-    ? `<div class="party-member-icon" 
-         style="background-image:url('${d.avatarData}');
+  const avatar = avatarData
+    ? `<div class="party-member-icon"
+         style="background-image:url('${escapeAttr(avatarData)}');
                 background-size:cover;background-position:center">
        </div>`
     : `<div class="party-member-icon" style="background:${favColor}">
-         ${name.charAt(0).toUpperCase()}
+         ${escapeHtml(String(rawName).charAt(0).toUpperCase())}
        </div>`;
 
-  
-
-  // Identificar host
   const hostId = state.partyMembers[0];
-  const amIHost = (state.currentUser.uid === hostId);
-  const isHostItself = (uid === hostId);
+  const amIHost = state.currentUser?.uid === hostId;
+  const isHostItself = uid === hostId;
 
-  // Botón solo visible si:
-  // ✔ yo soy host
-  // ✔ el miembro NO es el host
   const deleteBtn = (amIHost && !isHostItself)
-    ? `<button class="kick-btn" data-kick="${uid}">Quitar</button>`
-    : "";
+    ? `<button class="kick-btn" data-kick="${safeUid}">Quitar</button>`
+    : '';
 
   const transferBtn = (amIHost && !isHostItself)
-  ? `<button class="transfer-btn" data-transfer="${uid}">👑 Transferir host</button>`
-  : "";
+    ? `<button class="transfer-btn" data-transfer="${safeUid}">👑 Transferir host</button>`
+    : '';
 
-  const isMe = uid === state.currentUser.uid;
+  const isMe = uid === state.currentUser?.uid;
+  const privacyBtn = !isMe
+    ? `<button class="privacy-btn" data-privacy="${safeUid}">🔒 Privacidad</button>`
+    : '';
 
-const privacyBtn = !isMe
-  ? `<button class="privacy-btn" data-privacy="${uid}">🔒 Privacidad</button>`
-  : "";
+  const last = Number(d.lastOnline || 0);
+  const diff = Date.now() - last;
+  const isOnline = d.isOnline === true && diff < 180_000;
 
-const last = d.lastOnline || 0;
-const diff = Date.now() - last;
-
-// 10 segundos sin heartbeat = desconectado
-const isOnline = diff < 3000;
-
-
-const statusHTML = `
-  <div class="muted">
+  const statusHTML = `
+    <div class="muted">
       <b>Estado:</b>
-      <span class="conn-dot ${isOnline ? "on" : "off"}"></span>
-      <span>${isOnline ? "Conectado" : "Desconectado"}</span>
-  </div>
-`;
-
+      <span class="conn-dot ${isOnline ? 'on' : 'off'}"></span>
+      <span>${isOnline ? 'Conectado' : 'Desconectado'}</span>
+    </div>
+  `;
 
   return `
     <div class="party-member-card">
       ${avatar}
       <div class="party-member-info">
         <div class="name-row">
-  <b>${name}</b>
-  ${isHostItself ? `<span class="host-badge">👑 HOST</span>` : ""}
-  ${deleteBtn}
-  ${transferBtn}
-  ${privacyBtn}
-</div>
+          <b>${name}</b>
+          ${isHostItself ? '<span class="host-badge">👑 HOST</span>' : ''}
+          ${deleteBtn}
+          ${transferBtn}
+          ${privacyBtn}
+        </div>
 
         <div class="muted">${uni} — ${car}</div>
         <div class="muted"><b>Nac:</b> ${bday}</div>
@@ -124,9 +126,8 @@ const statusHTML = `
                        border-radius:4px;margin-left:6px;vertical-align:middle;"></span>
         </div>
 
-        <code style="opacity:.4;font-size:.7rem">${uid}</code>
+        <code style="opacity:.4;font-size:.7rem">${escapeHtml(uid)}</code>
         ${statusHTML}
-
       </div>
     </div>
   `;
@@ -289,6 +290,19 @@ export function initPair() {
 }
 
 
+async function syncCurrentPartyPointer(partyId) {
+  const uid = state.currentUser?.uid;
+  if (!uid) return;
+  try {
+    await setDoc(doc(db, 'users', uid), {
+      currentPartyId: partyId || null,
+      partyPointerUpdatedAt: Date.now()
+    }, { merge: true });
+  } catch (err) {
+    console.warn('No se pudo sincronizar currentPartyId:', err);
+  }
+}
+
 // ---------------------------------------------
 // Buscar si el usuario ya está en una party
 // ---------------------------------------------
@@ -296,7 +310,10 @@ export async function loadMyPair() {
   if (!state.currentUser) return;
   await loadMyPartyPrivacy();
 
-  const qy = query(collection(db, 'pairs'));
+  const qy = query(
+    collection(db, 'pairs'),
+    where('members', 'array-contains', state.currentUser.uid)
+  );
   const snap = await getDocs(qy);
 
   const mine = [];
@@ -312,6 +329,7 @@ export async function loadMyPair() {
 
   state.currentPartyId = current?.id || null;
   state.partyMembers   = current?.members || [];
+  await syncCurrentPartyPointer(state.currentPartyId);
   updateClosePartyButton();
   updatePartyCount();
 
@@ -345,6 +363,7 @@ async function createParty() {
 
   state.currentPartyId = ref.id;
   state.partyMembers = [state.currentUser.uid];
+  await syncCurrentPartyPointer(ref.id);
   updateClosePartyButton();
   updatePartyCount();
 
@@ -391,6 +410,7 @@ export async function joinParty(partyId) {
 
   state.currentPartyId = partyId;
   state.partyMembers = final.members || [];
+  await syncCurrentPartyPointer(partyId);
   updateClosePartyButton();
   updatePartyCount();
 
@@ -481,11 +501,13 @@ async function leavePartyCompletely() {
     try { await deleteDoc(ref); } catch {}
   }
 
+  await syncCurrentPartyPointer(null);
   clearPartyState();
 
 }
 
 function clearPartyState() {
+  syncCurrentPartyPointer(null).catch(() => {});
   if (unsubPartyDoc) {
     unsubPartyDoc();
     unsubPartyDoc = null;
@@ -522,20 +544,18 @@ function clearPartyState() {
 // Abandonar otras parties del usuario
 // ---------------------------------------------
 async function leaveOtherParties(exceptId) {
-  const qy = query(collection(db, 'pairs'));
+  const uid = state.currentUser?.uid;
+  if (!uid) return;
+
+  const qy = query(
+    collection(db, 'pairs'),
+    where('members', 'array-contains', uid)
+  );
   const snap = await getDocs(qy);
 
-  const uid = state.currentUser.uid;
-
   const tasks = [];
-
   snap.forEach(d => {
-    const data = d.data() || {};
-    if (
-      d.id !== exceptId &&
-      Array.isArray(data.members) &&
-      data.members.includes(uid)
-    ) {
+    if (d.id !== exceptId) {
       tasks.push(updateDoc(doc(db, 'pairs', d.id), {
         members: arrayRemove(uid)
       }));
@@ -544,6 +564,7 @@ async function leaveOtherParties(exceptId) {
 
   await Promise.all(tasks);
 }
+
 
 // ---------------------------------------------
 // Copiar ID al portapapeles
@@ -691,17 +712,49 @@ export async function setOnlineStatus(stateOnline) {
 }
 
 function privacyDocRef(){
-  return doc(db, "users", state.currentUser.uid, "privacy", "partyAccess");
+  return doc(db, 'users', state.currentUser.uid, 'privacy', 'partyAccess');
+}
+
+function privacyViewersColRef(){
+  return collection(db, 'users', state.currentUser.uid, 'privacy', 'partyAccess', 'viewers');
+}
+
+function privacyViewerDocRef(targetUid){
+  return doc(db, 'users', state.currentUser.uid, 'privacy', 'partyAccess', 'viewers', targetUid);
 }
 
 async function loadMyPartyPrivacy(){
   if (!state.currentUser) return;
 
   try {
-    const snap = await getDoc(privacyDocRef());
-    state.partyPrivacy = snap.exists() ? (snap.data()?.blocked || {}) : {};
+    const viewersSnap = await getDocs(privacyViewersColRef());
+    const next = {};
+    viewersSnap.forEach(d => {
+      next[d.id] = d.data() || {};
+    });
+
+    // Compatibilidad con el formato antiguo `blocked`.
+    if (viewersSnap.empty) {
+      const legacySnap = await getDoc(privacyDocRef());
+      const legacy = legacySnap.exists() ? (legacySnap.data()?.blocked || {}) : {};
+      Object.assign(next, legacy);
+
+      // Migración automática del mapa antiguo a un documento por viewer.
+      const migrationWrites = Object.entries(legacy).map(([viewerUid, viewerRules]) =>
+        setDoc(privacyViewerDocRef(viewerUid), {
+          notas: !!viewerRules?.notas,
+          horario: !!viewerRules?.horario,
+          calendario: !!viewerRules?.calendario,
+          malla: !!viewerRules?.malla,
+          migratedAt: Date.now()
+        }, { merge: true })
+      );
+      if (migrationWrites.length) await Promise.all(migrationWrites);
+    }
+
+    state.partyPrivacy = next;
   } catch (err) {
-    console.warn("No se pudo cargar privacidad:", err);
+    console.warn('No se pudo cargar privacidad:', err);
     state.partyPrivacy = {};
   }
 }
@@ -709,24 +762,27 @@ async function loadMyPartyPrivacy(){
 async function savePrivacyForMember(targetUid, rules){
   if (!state.currentUser || !targetUid) return;
 
-  const next = {
-    ...(state.partyPrivacy || {}),
-    [targetUid]: rules
+  const cleanRules = {
+    notas: !!rules?.notas,
+    horario: !!rules?.horario,
+    calendario: !!rules?.calendario,
+    malla: !!rules?.malla,
+    updatedAt: Date.now()
   };
 
-  state.partyPrivacy = next;
+  state.partyPrivacy = {
+    ...(state.partyPrivacy || {}),
+    [targetUid]: cleanRules
+  };
 
-  await setDoc(privacyDocRef(), {
-    blocked: next,
-    updatedAt: Date.now()
-  }, { merge:true });
+  await setDoc(privacyViewerDocRef(targetUid), cleanRules, { merge:true });
 
   if (typeof showToast === 'function') {
-    showToast("Privacidad actualizada", "success");
+    showToast('Privacidad actualizada', 'success');
   } else {
-    console.log("Privacidad actualizada");
+    console.log('Privacidad actualizada');
   }
-} 
+}
 
 function openPartyPrivacyModal(targetUid){
   if (!targetUid) return;
@@ -771,7 +827,7 @@ function openPartyPrivacyModal(targetUid){
         ">🔒</div>
 
         <div>
-          <div style="font-size:17px;font-weight:900;">Privacidad con ${name}</div>
+          <div style="font-size:17px;font-weight:900;">Privacidad con ${escapeHtml(name)}</div>
           <div style="font-size:13px;opacity:.75;margin-top:2px;">
             Marca qué quieres ocultarle a esta persona.
           </div>

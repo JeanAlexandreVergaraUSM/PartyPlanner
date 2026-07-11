@@ -1,7 +1,7 @@
   // js/progreso.js
 import { db } from './firebase.js';
 import { $, state } from './state.js';
-import { doc, onSnapshot, collection, getDocs, query, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { doc, onSnapshot, collection, getDocs, query, getDoc } from 'firebase/firestore';
 
 
 

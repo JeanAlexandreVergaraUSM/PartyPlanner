@@ -2,13 +2,15 @@
 import { db } from './firebase.js';
 import { canViewPartyZone, privacyBlockedMessage } from './privacy.js';
 import { $, state } from './state.js';
+import { escapeHtml } from './security/html.js';
 import {
   collection, addDoc, onSnapshot, doc, deleteDoc, query, orderBy, getDocs, getDoc, updateDoc, where
-} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+} from 'firebase/firestore';
 
 /* ================= Estado ================= */
 let currentMonth = new Date();        // foco del calendario
 let unsubscribeCal = null;
+let unsubscribeOwnCourses = null;
 let events = []; // propios [{id,title,courseId,date,start,end,allDay,color,createdAt}]
 let ownCourses = []; // cursos propios del semestre activo para la leyenda
 let ownCalendarFilter = {
@@ -34,6 +36,10 @@ export function registerCalendarUnsub(unsub){
 
 export function stopCalendarSub(){
   try { unsubCalendar?.(); } finally { unsubCalendar = null; }
+  try { unsubscribeCal?.(); } catch {}
+  unsubscribeCal = null;
+  try { unsubscribeOwnCourses?.(); } catch {}
+  unsubscribeOwnCourses = null;
 }
 
 export function clearCalendarUI(){
@@ -237,7 +243,7 @@ async function renderCalendarPartyPicker(){
     return `
       <button
         class="calendar-party-chip ${active ? 'active' : ''}"
-        data-uid="${m.uid}"
+        data-uid="${escapeHtml(m.uid)}"
         style="
           display:flex;
           align-items:center;
@@ -259,7 +265,7 @@ async function renderCalendarPartyPicker(){
   background:${m.favoriteColor || '#64748b'};
   flex:0 0 auto;
 "></span>
-        <span style="font-weight:600;">${m.name}</span>
+        <span style="font-weight:600;">${escapeHtml(m.name)}</span>
       </button>
     `;
   }).join('');
@@ -385,6 +391,14 @@ export function onCoursesChanged(){
 // Auto-init y reacción a ruta
 if (document.readyState === 'loading'){ window.addEventListener('DOMContentLoaded', ensureBoot); } else { ensureBoot(); }
 document.addEventListener('route:calendario', ensureBoot);
+
+document.addEventListener('semester:changed', () => {
+  if (booted) onActiveSemesterChanged();
+});
+
+document.addEventListener('courses:changed', () => {
+  if (booted) onCoursesChanged();
+});
 
 /* ================= Shell / Header ================= */
 function renderShell(){
@@ -579,7 +593,9 @@ function wireSubtabs(){
 
 /* ================= Datos (suscripción Firestore) – PROPIO ================= */
 function subscribeIfPossible(){
-  if (unsubscribeCal){ unsubscribeCal(); unsubscribeCal = null; }
+  if (unsubscribeCal){ try { unsubscribeCal(); } catch {} unsubscribeCal = null; }
+  if (unsubscribeOwnCourses){ try { unsubscribeOwnCourses(); } catch {} unsubscribeOwnCourses = null; }
+
   events = [];
   ownCourses = [];
   paintEvents();
@@ -587,17 +603,22 @@ function subscribeIfPossible(){
 
   if (!state.currentUser || !state.activeSemesterId) return;
 
+  const uid = state.currentUser.uid;
+  const semId = state.activeSemesterId;
+
   // 🔹 Suscripción a eventos
-  const calRef = collection(db,'users',state.currentUser.uid,'semesters',state.activeSemesterId,'calendar');
+  const calRef = collection(db,'users',uid,'semesters',semId,'calendar');
   unsubscribeCal = onSnapshot(query(calRef, orderBy('date','asc')), (snap)=>{
+    if (state.currentUser?.uid !== uid || state.activeSemesterId !== semId) return;
     events = snap.docs.map(d => ({ id:d.id, ...d.data() }));
     paintEvents();
     renderOwnCalendarLegend();
   });
 
   // 🔹 Suscripción a ramos del semestre activo
-  const coursesRef = collection(db,'users',state.currentUser.uid,'semesters',state.activeSemesterId,'courses');
-  onSnapshot(query(coursesRef, orderBy('name','asc')), (snap)=>{
+  const coursesRef = collection(db,'users',uid,'semesters',semId,'courses');
+  unsubscribeOwnCourses = onSnapshot(query(coursesRef, orderBy('name','asc')), (snap)=>{
+    if (state.currentUser?.uid !== uid || state.activeSemesterId !== semId) return;
     ownCourses = snap.docs.map(d => ({ id:d.id, ...d.data() }));
     renderOwnCalendarLegend();
   });
@@ -932,7 +953,7 @@ async function populateSharedSemesters() {
     state.shared.calendar.semId = null;
     const grid = $('calSharedGrid');
     if (grid) {
-      grid.innerHTML = `<div class="muted">Esta persona no tiene el semestre <b>${activeLabel}</b> creado.</div>`;
+      grid.innerHTML = `<div class="muted">Esta persona no tiene el semestre <b>${escapeHtml(activeLabel)}</b> creado.</div>`;
     }
     $('calSharedHint').textContent = 'Se intenta mostrar el mismo semestre activo que tienes tú.';
     return null;
@@ -1538,8 +1559,8 @@ async function loadCombinedReminders(){
       ? all.map(r => `
           <div class="grade-item">
             <div>
-              <strong>${r.title || '(sin título)'}</strong>
-              <div class="muted">${r.owner} · ${r.datetime?.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) || ''}</div>
+              <strong>${escapeHtml(r.title || '(sin título)')}</strong>
+              <div class="muted">${escapeHtml(r.owner)} · ${escapeHtml(r.datetime?.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) || '')}</div>
             </div>
           </div>
         `).join('')
@@ -1663,7 +1684,7 @@ function renderOwnCalendarLegend(){
           flex:0 0 auto;
           border:1px solid rgba(255,255,255,0.18);
         "></span>
-        <span>${item.name}</span>
+        <span>${escapeHtml(item.name)}</span>
       </div>
     `).join('')}
   `;
@@ -1725,7 +1746,7 @@ function cal_askDeleteEventModal(title){
           border:1px solid rgba(255,255,255,.08);
           font-size:14px;
         ">
-          ¿Eliminar "<b>${title || 'evento'}</b>"?
+          ¿Eliminar "<b>${escapeHtml(title || 'evento')}</b>"?
         </div>
 
         <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px;">
@@ -2113,9 +2134,14 @@ export async function listPairReminders({ range='today' }={}) {
    - Importa eventos del MES ACTUAL a Firestore (subcolección calendar)
    ============================================================ */
 
-// TODO: PON AQUI TUS CREDENCIALES DE GOOGLE API
-const GAPI_CLIENT_ID = '489697428786-m2hkvn9ohor0unrhk6g5i3g7vqla86c4.apps.googleusercontent.com';
-const GAPI_API_KEY   = 'AIzaSyA6M73T0k3yPyseAZnkPxBO5GYXPeL8dlQ';
+const GAPI_CLIENT_ID = import.meta.env.VITE_GOOGLE_CALENDAR_CLIENT_ID || '';
+const GAPI_API_KEY = import.meta.env.VITE_GOOGLE_CALENDAR_API_KEY || '';
+
+function ensureGoogleCalendarConfig(){
+  if (!GAPI_CLIENT_ID || !GAPI_API_KEY) {
+    throw new Error('Google Calendar no está configurado. Define VITE_GOOGLE_CALENDAR_CLIENT_ID y VITE_GOOGLE_CALENDAR_API_KEY.');
+  }
+}
 
 const GAPI_DISCOVERY_DOCS = [
   'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest'
@@ -2163,6 +2189,7 @@ function loadGIS() {
 
 /** Inicializa gapi.client solo con apiKey + discoveryDocs */
 async function initGapiClient() {
+  ensureGoogleCalendarConfig();
   if (gapiInited) return;
   await loadGapi();
   await new Promise((resolve) => {
@@ -2178,6 +2205,7 @@ async function initGapiClient() {
 
 /** Inicializa el tokenClient de GIS */
 async function initTokenClient() {
+  ensureGoogleCalendarConfig();
   if (gisInited && tokenClient) return;
   await loadGIS();
   tokenClient = window.google.accounts.oauth2.initTokenClient({

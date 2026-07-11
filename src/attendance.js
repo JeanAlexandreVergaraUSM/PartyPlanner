@@ -1,31 +1,87 @@
 // js/attendance.js
 import { db } from './firebase.js';
 import { $, state } from './state.js';
-import { collection, doc, onSnapshot, getDocs, updateDoc, addDoc, setDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { escapeHtml, escapeAttr } from './security/html.js';
+import { collection, doc, onSnapshot, getDocs, updateDoc, addDoc, setDoc, deleteDoc } from 'firebase/firestore';
 
 let unsubAttendance = null;
+let unsubSelectedAttendance = null;
 let unsubPreload = null;
+const preloadAttendanceUnsubs = new Map();
+
+function stopSelectedAttendanceSub(){
+  try { unsubSelectedAttendance?.(); } catch {}
+  unsubSelectedAttendance = null;
+}
+
+function stopPreloadAttendanceSubs(){
+  try { unsubPreload?.(); } catch {}
+  unsubPreload = null;
+
+  for (const [, unsub] of preloadAttendanceUnsubs) {
+    try { unsub?.(); } catch {}
+  }
+  preloadAttendanceUnsubs.clear();
+}
+
+export function stopAttendanceSubs(){
+  try { unsubAttendance?.(); } catch {}
+  unsubAttendance = null;
+  stopSelectedAttendanceSub();
+  stopPreloadAttendanceSubs();
+}
 
 export function initAttendance(){
-  if (!state.currentUser || !state.activeSemesterId) return;
+  bindAttendanceModalUI();
+  if (unsubAttendance) {
+    try { unsubAttendance(); } catch {}
+    unsubAttendance = null;
+  }
+  stopSelectedAttendanceSub();
 
-  const ref = collection(db,'users',state.currentUser.uid,'semesters',state.activeSemesterId,'courses');
+  if (!state.currentUser || !state.activeSemesterId) {
+    const sel = $('attCourseSel');
+    if (sel) sel.innerHTML = '<option value="" disabled selected>Elige un ramo…</option>';
+    renderAttendance([]);
+    return;
+  }
+
+  const uid = state.currentUser.uid;
+  const semId = state.activeSemesterId;
+  const ref = collection(db,'users',uid,'semesters',semId,'courses');
+
   unsubAttendance = onSnapshot(ref, snap => {
     const asistCourses = snap.docs.filter(d => d.data().asistencia);
-
     const sel = $('attCourseSel');
-    if (sel){
-      sel.innerHTML = '<option value="" disabled selected>Elige un ramo…</option>';
-      asistCourses.forEach(d=>{
-        sel.innerHTML += `<option value="${d.id}">${d.data().name}</option>`;
-      });
-    }
 
-    sel?.addEventListener('change', ()=>{
-      const courseId = sel.value;
-      const match = asistCourses.find(d=>d.id === courseId);
-      renderAttendance(match ? [match] : []);
-    });
+    if (sel){
+      const previous = sel.value || '';
+      sel.innerHTML = '<option value="" disabled>Elige un ramo…</option>';
+
+      asistCourses.forEach(d=>{
+        const opt = document.createElement('option');
+        opt.value = d.id;
+        opt.textContent = d.data().name || 'Ramo';
+        sel.appendChild(opt);
+      });
+
+      const stillExists = previous && asistCourses.some(d => d.id === previous);
+      sel.value = stillExists ? previous : '';
+
+      // onChange sustituye el handler anterior: evita acumulación de listeners.
+      sel.onchange = () => {
+        const courseId = sel.value;
+        const match = asistCourses.find(d => d.id === courseId);
+        renderAttendance(match ? [match] : []);
+      };
+
+      if (stillExists) {
+        const match = asistCourses.find(d => d.id === previous);
+        renderAttendance(match ? [match] : []);
+      } else {
+        renderAttendance([]);
+      }
+    }
   });
 }
 
@@ -40,10 +96,10 @@ function renderAttendance(list){
     const div = document.createElement('div');
     div.className = 'card';
     div.innerHTML = `
-      <h4>${c.name}</h4>
-      <div class="att-days" data-id="${docSnap.id}"></div>
-      <div class="muted">Asistencia actual: <span class="att-percent" data-id="${docSnap.id}">0%</span></div>
-      <button class="btn btn-secondary add-att-btn" data-id="${docSnap.id}" style="margin-top:8px;">+ Agregar asistencia</button>
+      <h4>${escapeHtml(c.name || 'Ramo')}</h4>
+      <div class="att-days" data-id="${escapeAttr(docSnap.id)}"></div>
+      <div class="muted">Asistencia actual: <span class="att-percent" data-id="${escapeAttr(docSnap.id)}">0%</span></div>
+      <button class="btn btn-secondary add-att-btn" data-id="${escapeAttr(docSnap.id)}" style="margin-top:8px;">+ Agregar asistencia</button>
     `;
     host.appendChild(div);
     loadAttendance(docSnap.id);
@@ -56,8 +112,16 @@ function renderAttendance(list){
 
 
 async function loadAttendance(courseId){
-  const ref = collection(db,'users',state.currentUser.uid,'semesters',state.activeSemesterId,'courses',courseId,'attendance');
-  onSnapshot(ref, snap=>{
+  stopSelectedAttendanceSub();
+  if (!state.currentUser || !state.activeSemesterId || !courseId) return;
+
+  const uid = state.currentUser.uid;
+  const semId = state.activeSemesterId;
+  const ref = collection(db,'users',uid,'semesters',semId,'courses',courseId,'attendance');
+
+  unsubSelectedAttendance = onSnapshot(ref, snap=>{
+    // Ignora callbacks tardíos si el usuario cambió de semestre.
+    if (state.currentUser?.uid !== uid || state.activeSemesterId !== semId) return;
     const days = snap.docs.map(d=>({id:d.id, ...d.data()}));
     drawAttendance(courseId, days);
   });
@@ -123,14 +187,24 @@ function closeAttendanceModal(){
   currentCourseForAttendance = null;
 }
 
-document.addEventListener('DOMContentLoaded', ()=>{
-  $('attCancel')?.addEventListener('click', closeAttendanceModal);
+let attendanceModalUiBound = false;
 
+function bindAttendanceModalUI(){
+  if (attendanceModalUiBound) return;
+  attendanceModalUiBound = true;
+
+  $('attCancel')?.addEventListener('click', closeAttendanceModal);
   $('attPresente')?.addEventListener('click', ()=> saveAttendance('present'));
   $('attAusente')?.addEventListener('click', ()=> saveAttendance('absent'));
   $('attJustificado')?.addEventListener('click', ()=> saveAttendance('justified'));
   $('attNoClass')?.addEventListener('click', ()=> saveAttendance('noClass'));
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bindAttendanceModalUI, { once:true });
+} else {
+  bindAttendanceModalUI();
+}
 
 async function saveAttendance(status) {
   if (!currentCourseForAttendance) return;
@@ -180,77 +254,106 @@ async function deleteAttendance(courseId, date){
 
 
 export async function preloadAttendanceData() {
-  if (!state.currentUser || !state.activeSemesterId) return;
+  stopPreloadAttendanceSubs();
 
-  // Evita duplicar listeners
-  if (unsubPreload) {
-    try { unsubPreload(); } catch {}
-    unsubPreload = null;
-  }
+  if (!state.currentUser || !state.activeSemesterId) return false;
+
+  const uid = state.currentUser.uid;
+  const semId = state.activeSemesterId;
 
   if (!window.courseAttendance) window.courseAttendance = {};
 
   const coursesRef = collection(
     db,
-    'users', state.currentUser.uid,
-    'semesters', state.activeSemesterId,
+    'users', uid,
+    'semesters', semId,
     'courses'
   );
 
-  /* ---------- 1️⃣ Precarga inmediata sin esperar onSnapshot ---------- */
+  const computePercent = (attSnap) => {
+    const days = attSnap.docs.map(d => d.data());
+    const valid = days.filter(d => !d.noClass);
+    const ok = valid.filter(d => d.present || d.justified).length;
+    return valid.length ? Math.round((ok / valid.length) * 100) : 0;
+  };
+
+  const subscribeCourseAttendance = (courseId) => {
+    if (preloadAttendanceUnsubs.has(courseId)) return;
+
+    const attRef = collection(
+      db,
+      'users', uid,
+      'semesters', semId,
+      'courses', courseId,
+      'attendance'
+    );
+
+    const unsub = onSnapshot(attRef, (attSnap) => {
+      if (state.currentUser?.uid !== uid || state.activeSemesterId !== semId) return;
+
+      const percent = computePercent(attSnap);
+      window.courseAttendance[courseId] = percent;
+
+      document.dispatchEvent(new CustomEvent('attendance:ready', {
+        detail: { courseId, percent }
+      }));
+    });
+
+    preloadAttendanceUnsubs.set(courseId, unsub);
+  };
+
+  const reconcileAttendanceSubscriptions = (snap) => {
+    const activeIds = new Set(
+      snap.docs
+        .filter(d => d.data()?.asistencia)
+        .map(d => d.id)
+    );
+
+    for (const [courseId, unsub] of preloadAttendanceUnsubs) {
+      if (!activeIds.has(courseId)) {
+        try { unsub?.(); } catch {}
+        preloadAttendanceUnsubs.delete(courseId);
+        delete window.courseAttendance[courseId];
+      }
+    }
+
+    for (const courseId of activeIds) {
+      subscribeCourseAttendance(courseId);
+    }
+  };
+
+  // Precarga inicial en paralelo: evita el patrón N consultas secuenciales.
   try {
     const snap = await getDocs(coursesRef);
-    for (const c of snap.docs) {
-      const data = c.data() || {};
-      if (!data.asistencia) continue;
+    const asistCourses = snap.docs.filter(d => d.data()?.asistencia);
 
+    const results = await Promise.all(asistCourses.map(async (c) => {
       const attRef = collection(
         db,
-        'users', state.currentUser.uid,
-        'semesters', state.activeSemesterId,
+        'users', uid,
+        'semesters', semId,
         'courses', c.id,
         'attendance'
       );
       const attSnap = await getDocs(attRef);
-      const days = attSnap.docs.map(d => d.data());
-      const valid = days.filter(d => !d.noClass);
-      const ok = valid.filter(d => d.present || d.justified).length;
-      const percent = valid.length ? Math.round((ok / valid.length) * 100) : 0;
-      window.courseAttendance[c.id] = percent;
-    }
-    console.log('⚡ Precarga inicial de asistencia:', window.courseAttendance);
+      return [c.id, computePercent(attSnap)];
+    }));
 
-    // 🔹 Emitir evento para que Notas recalcule inmediatamente
-    document.dispatchEvent(new CustomEvent('attendance:ready', { detail: { preload: true } }));
+    if (state.currentUser?.uid === uid && state.activeSemesterId === semId) {
+      for (const [courseId, percent] of results) {
+        window.courseAttendance[courseId] = percent;
+      }
+
+      document.dispatchEvent(new CustomEvent('attendance:ready', {
+        detail: { preload: true }
+      }));
+    }
   } catch (err) {
     console.error('Error en precarga rápida de asistencia:', err);
   }
 
-  /* ---------- 2️⃣ Luego activa los listeners reactivos ---------- */
-  unsubPreload = onSnapshot(coursesRef, (snap) => {
-    const asistCourses = snap.docs.filter(d => d.data()?.asistencia);
-    asistCourses.forEach(c => {
-      const attRef = collection(
-        db,
-        'users', state.currentUser.uid,
-        'semesters', state.activeSemesterId,
-        'courses', c.id,
-        'attendance'
-      );
-      onSnapshot(attRef, (attSnap) => {
-        const days = attSnap.docs.map(d => d.data());
-        const valid = days.filter(d => !d.noClass);
-        const ok = valid.filter(d => d.present || d.justified).length;
-        const percent = valid.length ? Math.round((ok / valid.length) * 100) : 0;
-        window.courseAttendance[c.id] = percent;
-
-        // Notifica recalculo solo si cambió un curso
-        document.dispatchEvent(new CustomEvent('attendance:ready', {
-          detail: { courseId: c.id, percent }
-        }));
-      });
-    });
-  });
+  // Un único listener de cursos administra exactamente un listener por ramo.
+  unsubPreload = onSnapshot(coursesRef, reconcileAttendanceSubscriptions);
   return true;
 }
 

@@ -70,22 +70,12 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 
-// ✅ Mantén estas funciones al final para sincronizar los módulos
-import { onActiveSemesterChanged as gradesOnSem, onCoursesChanged as gradesOnCourses } from './grades.js';
-import { onActiveSemesterChanged as calOnSem, onCoursesChanged as calOnCourses } from './calendar.js';
-import { onActiveSemesterChanged as schedOnSem } from './schedule.js';
-import { refreshProgreso } from './progreso.js';
-
+// Sincronización desacoplada: evita imports estáticos de módulos pesados.
+// Los módulos escuchan semester:changed y courses:changed cuando ya están cargados.
 export function notifyActiveSemesterChangedAll() {
-  schedOnSem?.();
-  gradesOnSem?.();
-  calOnSem?.();
-  refreshProgreso?.();
+  document.dispatchEvent(new Event('semester:changed'));
 }
 
 export function notifyCoursesChangedAll() {
-  gradesOnCourses?.();
-  calOnCourses?.();
-  refreshProgreso?.();
+  document.dispatchEvent(new Event('courses:changed'));
 }
-

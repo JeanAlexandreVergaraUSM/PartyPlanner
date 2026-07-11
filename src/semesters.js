@@ -1,13 +1,11 @@
 // js/semesters.js
 import { db } from './firebase.js';
+import { escapeHtml, escapeAttr } from './security/html.js';
 import { $, state, updateDebug } from './state.js';
 import {
   collection, addDoc, onSnapshot, doc, deleteDoc,
   query, orderBy, getDoc, where, getDocs, updateDoc, setDoc
-} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-
-import { onActiveSemesterChanged } from './schedule.js';
-import { onActiveSemesterChanged as calOnSem } from './calendar.js';
+} from 'firebase/firestore';
 import { setCoursesSubscription, resetCourseForm, updateFormForUniversity } from './courses.js';
 
 let unsubscribeSemesters = null;
@@ -272,8 +270,6 @@ export async function refreshSemestersSub() {
     }
 
     // Notifica al resto de módulos
-    onActiveSemesterChanged();
-    calOnSem?.();
     updateDebug();
     document.dispatchEvent(new Event('semester:changed'));
 
@@ -300,13 +296,13 @@ export async function refreshSemestersSub() {
       const isActive = state.activeSemesterId === docSnap.id;
       item.innerHTML = `
         <div>
-          <div><b>${d.label}</b> <span class="course-meta">· ${d.universityAtThatTime}</span></div>
+          <div><b>${escapeHtml(d.label)}</b> <span class="course-meta">· ${escapeHtml(d.universityAtThatTime)}</span></div>
         </div>
         <div class="inline">
           ${isActive
             ? '<span class="course-meta">Activo</span>'
-            : `<button class="ghost sem-activate" data-id="${docSnap.id}">Activar</button>`}
-          <button class="danger sem-delete" data-id="${docSnap.id}">Eliminar</button>
+            : `<button class="ghost sem-activate" data-id="${escapeAttr(docSnap.id)}">Activar</button>`}
+          <button class="danger sem-delete" data-id="${escapeAttr(docSnap.id)}">Eliminar</button>
         </div>
       `;
       list.appendChild(item);
@@ -402,9 +398,7 @@ if (uniEl) uniEl.textContent = state.activeSemesterData?.universityAtThatTime ||
   resetCourseForm();
   setCoursesSubscription();
 
-  // Avisar al horario y calendario
-  onActiveSemesterChanged();
-  calOnSem?.();
+  // Avisar al resto de módulos mediante un evento desacoplado.
   updateDebug();
 
   // Refresca la lista para que se vea "Activo"
@@ -434,8 +428,8 @@ if (grLabel) grLabel.textContent = '—';
   const thr = $('gr-passThreshold');
   if (thr) thr.value = '';
 
-  onActiveSemesterChanged();
   updateDebug();
+  document.dispatchEvent(new Event('semester:changed'));
 }
 
 /* ---------- helpers ---------- */
@@ -708,12 +702,6 @@ cancelBtn.onclick = () => {
   ensureCourseSaveBinding();
 };
 
-      cancelBtn.onclick = () => {
-        resetCourseForm();
-        cancelBtn.classList.add('hidden');
-        newSaveBtn.textContent = 'Agregar ramo';
-        ensureCourseSaveBinding();
-      };
     }
   } catch (err) {
     console.error('❌ Error al editar ramo:', err);

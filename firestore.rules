@@ -1,0 +1,241 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function userPath(uid) {
+      return /databases/$(database)/documents/users/$(uid);
+    }
+
+    function pairPath(pid) {
+      return /databases/$(database)/documents/pairs/$(pid);
+    }
+
+    function privacyViewerPath(ownerUid, viewerUid) {
+      return /databases/$(database)/documents/users/$(ownerUid)/privacy/partyAccess/viewers/$(viewerUid);
+    }
+
+    function sameParty(ownerUid) {
+      let viewerPath = userPath(request.auth.uid);
+      let viewerData = signedIn() && exists(viewerPath) ? get(viewerPath).data : {};
+      let pid = viewerData.get('currentPartyId', null);
+
+      return signedIn()
+        && ownerUid != request.auth.uid
+        && pid is string
+        && exists(pairPath(pid))
+        && get(pairPath(pid)).data.members is list
+        && get(pairPath(pid)).data.members.hasAll([ownerUid, request.auth.uid]);
+    }
+
+    function zoneAllowed(ownerUid, zone) {
+      let viewerPath = privacyViewerPath(ownerUid, request.auth.uid);
+      let viewerRules = exists(viewerPath) ? get(viewerPath).data : {};
+
+      return sameParty(ownerUid)
+        && viewerRules.get(zone, false) != true;
+    }
+
+    function anySharedAcademicZone(ownerUid) {
+      return zoneAllowed(ownerUid, 'notas')
+        || zoneAllowed(ownerUid, 'horario')
+        || zoneAllowed(ownerUid, 'calendario')
+        || zoneAllowed(ownerUid, 'malla');
+    }
+
+    function canReadCourseMetadata(ownerUid) {
+      return zoneAllowed(ownerUid, 'notas')
+        || zoneAllowed(ownerUid, 'horario')
+        || zoneAllowed(ownerUid, 'calendario');
+    }
+
+    function validMembersList(members) {
+      return members is list
+        && members.size() <= 5
+        && members.toSet().size() == members.size();
+    }
+
+    function onlyMembersChanged() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members']);
+    }
+
+    function isSelfJoin() {
+      let oldMembers = resource.data.members;
+      let newMembers = request.resource.data.members;
+
+      return !oldMembers.hasAny([request.auth.uid])
+        && newMembers.hasAny([request.auth.uid])
+        && newMembers.hasAll(oldMembers)
+        && newMembers.size() == oldMembers.size() + 1;
+    }
+
+    function isSelfLeave() {
+      let oldMembers = resource.data.members;
+      let newMembers = request.resource.data.members;
+
+      return oldMembers.hasAny([request.auth.uid])
+        && !newMembers.hasAny([request.auth.uid])
+        && oldMembers.toSet().difference(newMembers.toSet()).hasOnly([request.auth.uid])
+        && newMembers.size() == oldMembers.size() - 1;
+    }
+
+    function isHostMembershipChange() {
+      let oldMembers = resource.data.members;
+      let newMembers = request.resource.data.members;
+
+      return oldMembers.size() > 0
+        && oldMembers[0] == request.auth.uid
+        && newMembers.toSet().difference(oldMembers.toSet()).size() == 0;
+    }
+
+    match /pairs/{pairId} {
+      // Obtener una party concreta por su código de invitación.
+      allow get: if signedIn();
+
+      // La consulta del cliente debe usar:
+      // where('members', 'array-contains', request.auth.uid)
+      // Esta condición coincide directamente con esa restricción de consulta.
+      allow list: if signedIn()
+        && request.auth.uid in resource.data.members;
+
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['members', 'createdAt'])
+        && validMembersList(request.resource.data.members)
+        && request.resource.data.members.size() == 1
+        && request.resource.data.members[0] == request.auth.uid;
+
+      allow update: if signedIn()
+        && resource.data.members is list
+        && validMembersList(request.resource.data.members)
+        && onlyMembersChanged()
+        && (isSelfJoin() || isSelfLeave() || isHostMembershipChange());
+
+      allow delete: if signedIn()
+        && resource.data.members is list
+        && (
+          (resource.data.members.size() > 0 && resource.data.members[0] == request.auth.uid)
+          || resource.data.members.size() == 0
+        );
+    }
+
+    match /users/{uid} {
+      allow create: if isSelf(uid);
+      allow read: if isSelf(uid) || sameParty(uid);
+      allow update, delete: if isSelf(uid);
+
+      match /profile/{profileId} {
+        allow read: if isSelf(uid) || sameParty(uid);
+        allow write: if isSelf(uid);
+      }
+
+      match /privacy/{privacyId} {
+        // El documento padre puede contener datos legacy; solo su dueño lo ve.
+        allow read, write: if isSelf(uid);
+
+        match /viewers/{viewerUid} {
+          allow read: if isSelf(uid)
+            || (signedIn() && request.auth.uid == viewerUid && sameParty(uid));
+          allow write: if isSelf(uid);
+        }
+      }
+
+      match /semesters/{semesterId} {
+        allow read: if isSelf(uid) || anySharedAcademicZone(uid);
+        allow write: if isSelf(uid);
+
+        match /courses/{courseId} {
+          allow read: if isSelf(uid) || canReadCourseMetadata(uid);
+          allow write: if isSelf(uid);
+
+          match /grading/{gradingId} {
+            allow read: if isSelf(uid) || zoneAllowed(uid, 'notas');
+            allow write: if isSelf(uid);
+
+            match /components/{componentId} {
+              allow read: if isSelf(uid) || zoneAllowed(uid, 'notas');
+              allow write: if isSelf(uid);
+            }
+          }
+
+          match /groups/{groupId} {
+            allow read, write: if isSelf(uid);
+          }
+
+          match /attendance/{attendanceId} {
+            allow read, write: if isSelf(uid);
+          }
+
+          match /rules/{ruleId} {
+            allow read, write: if isSelf(uid);
+
+            match /grades/{gradeId} {
+              allow read, write: if isSelf(uid);
+            }
+          }
+
+          match /simulations/{simulationId} {
+            allow read, write: if isSelf(uid);
+          }
+        }
+
+        match /schedule/{scheduleId} {
+          allow read: if isSelf(uid) || zoneAllowed(uid, 'horario');
+          allow write: if isSelf(uid);
+        }
+
+        match /calendar/{eventId} {
+          allow read: if isSelf(uid) || zoneAllowed(uid, 'calendario');
+          allow write: if isSelf(uid);
+        }
+      }
+
+      match /malla/{docId} {
+        allow read: if isSelf(uid) || zoneAllowed(uid, 'malla');
+        allow write: if isSelf(uid);
+      }
+
+      match /customMallas/{mallaId} {
+        allow read: if isSelf(uid) || zoneAllowed(uid, 'malla');
+        allow write: if isSelf(uid);
+      }
+
+      match /custom_schedules/{scheduleId} {
+        allow read: if isSelf(uid) || zoneAllowed(uid, 'horario');
+        allow write: if isSelf(uid);
+      }
+
+      match /reminders/{reminderId} {
+        allow read: if isSelf(uid) || zoneAllowed(uid, 'calendario');
+        allow write: if isSelf(uid);
+      }
+
+      match /usage/{usageId} {
+        allow read: if isSelf(uid);
+        allow write: if false;
+      }
+
+      match /mallaImports/{importId} {
+        allow read: if isSelf(uid);
+        allow write: if false;
+      }
+    }
+
+    // Catálogos públicos de solo lectura, si se agregan al proyecto.
+    match /catalog/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

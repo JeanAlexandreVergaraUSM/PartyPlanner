@@ -3,7 +3,7 @@ import { $, state } from './state.js';
 window.state = state;
 import { db } from './firebase.js';
 import { canViewPartyZone, privacyBlockedMessage } from './privacy.js';
-import { doc, setDoc,addDoc,deleteDoc, onSnapshot, getDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { doc, setDoc,addDoc,deleteDoc, onSnapshot, getDoc, collection, getDocs } from 'firebase/firestore';
 
 // Cache en memoria para mallas personalizadas del dúo
 const duoCustomCache = new Map(); // nombre -> objeto malla
@@ -304,8 +304,8 @@ function renderLegendForAreas(areas){
 
   legend.innerHTML = list.map(a => `
     <span>
-      <span class="legend-color" style="background:${a.color || '#888'}"></span>
-      ${a.nombre}
+      <span class="legend-color" style="background:${safeMallaColor(a.color, '#888888')}"></span>
+      ${escapeHtml(a.nombre)}
     </span>
   `).join('');
 }
@@ -693,8 +693,8 @@ function renderFromProfile() {
         </h3>
         
         <p style="font-size: 1rem; margin-bottom: 24px; max-width: 500px; line-height: 1.5;">
-          La carrera <strong style="color:var(--ink)">${nombreCarrera}</strong> en 
-          <strong style="color:var(--ink)">${nombreUni}</strong> no tiene una estructura precargada.
+          La carrera <strong style="color:var(--ink)">${escapeHtml(nombreCarrera)}</strong> en 
+          <strong style="color:var(--ink)">${escapeHtml(nombreUni)}</strong> no tiene una estructura precargada.
         </p>
         
         <div style="
@@ -769,8 +769,8 @@ personalizadas = personalizadas.filter(m => m?.nombre && m.nombre.trim() !== '')
       <select id="malla-selector" style="margin-left:8px;padding:4px;">
     ${opciones.length
     ? opciones.map(o => `
-        <option value="${o.nombre}" ${o.oficial ? 'data-oficial="1"' : ''}>
-          ${o.nombre}
+        <option value="${escapeHtml(o.nombre)}" ${o.oficial ? 'data-oficial="1"' : ''}>
+          ${escapeHtml(o.nombre)}
         </option>`).join('')
     : '<option value="" disabled selected>— No hay mallas disponibles —</option>'}
 </select>
@@ -968,7 +968,7 @@ modal.innerHTML = `
       <label>Nombre de la Malla:</label>
       <input id="malla-nombre" type="text" class="input" 
              placeholder="Ej: Mi Malla USM 2025" 
-             value="${existing?.nombre || ''}"/>
+             value="${escapeHtml(existing?.nombre || '')}"/>
 
       <label>Cantidad de Semestres:</label>
       <input id="malla-semestres" type="number" class="input" min="1" max="12" value="${existing?.semestres || 1}"/>
@@ -1007,8 +1007,8 @@ document.body.appendChild(modal);
       elAreasCont.innerHTML += `
         <div class="row" style="align-items:center;gap:6px;margin-top:4px;">
           <label>Área ${i}:</label>
-          <input type="text" class="input area-name" placeholder="Nombre del área" value="${area.nombre || ''}" style="flex:1;"/>
-          <input type="color" class="area-color" value="${area.color || '#22c55e'}"/>
+          <input type="text" class="input area-name" placeholder="Nombre del área" value="${escapeHtml(area.nombre || '')}" style="flex:1;"/>
+          <input type="color" class="area-color" value="${safeMallaColor(area.color, '#22c55e')}"/>
         </div>`;
     }
   }
@@ -1117,10 +1117,10 @@ function prerreqBadgesHTML(prereqs, codigoMap){
     const key = String(pr).trim();
     const info = codigoMap.get(key) || codigoMap.get(key.replace(/^[A-Za-z-]+/,''));
     if (info){
-      return `<span class="prereq-label" style="background:${info.color}">${info.n}</span>`;
+      return `<span class="prereq-label" style="background:${safeMallaColor(info.color, '#666666')}">${escapeHtml(info.n)}</span>`;
     }
     // si no encontramos el ramo, mostramos el sufijo numérico como antes
-    return `<span class="prereq-label">${key.replace(/^[A-Za-z-]+/, '')}</span>`;
+    return `<span class="prereq-label">${escapeHtml(key.replace(/^[A-Za-z-]+/, ''))}</span>`;
   }).join('');
 }
 
@@ -1187,10 +1187,10 @@ div.dataset.codigo = (r && r._id) || `${malla.nombre}::S${semObj.semestre}-I${i}
 
 div.innerHTML = `
   <div class="top-bar">
-    <span class="sigla-label">${(r.codigo || '').trim()}</span>
+    <span class="sigla-label">${escapeHtml((r.codigo || '').trim())}</span>
     <span class="num-label">${counter}</span>
   </div>
-  <div class="course-name">${r.nombre || ''}</div>
+  <div class="course-name">${escapeHtml(r.nombre || '')}</div>
   <div class="bottom-bar"></div>
 `;
 
@@ -1270,7 +1270,7 @@ function openEditRamoModal(div, malla, sem, index) {
   const prev = (malla.estructura.find(e => e.semestre === sem)?.ramos?.[index]) || {};
 
   const areasOptions = malla.areas
-    .map(a => `<option value="${a.nombre}">${a.nombre}</option>`)
+    .map(a => `<option value="${escapeHtml(a.nombre)}">${escapeHtml(a.nombre)}</option>`)
     .join('');
 
   modal.innerHTML = `
@@ -1415,8 +1415,8 @@ function openEditAreasModal(malla) {
     row.style = 'align-items:center; gap:8px; margin-top:8px; display:flex;';
     
     row.innerHTML = `
-      <input type="text" class="input area-name" value="${nombre}" placeholder="Nombre" style="flex:1;"/>
-      <input type="color" class="area-color" value="${color}" style="width:40px; height:36px; padding:0; border:none; background:transparent; cursor:pointer;"/>
+      <input type="text" class="input area-name" value="${escapeHtml(nombre)}" placeholder="Nombre" style="flex:1;"/>
+      <input type="color" class="area-color" value="${safeMallaColor(color, '#6366f1')}" style="width:40px; height:36px; padding:0; border:none; background:transparent; cursor:pointer;"/>
       <button class="btn-del-area" title="Eliminar" style="
           background:rgba(239,68,68,0.15); color:#fca5a5; border:none; 
           border-radius:8px; width:36px; height:36px; cursor:pointer; 
@@ -1850,10 +1850,10 @@ function renderCustomMalla(nombre, opts = {}) {
 
     div.innerHTML = `
       <div class="top-bar">
-        <span class="sigla-label">${r.codigo || ''}</span>
+        <span class="sigla-label">${escapeHtml(r.codigo || '')}</span>
         <span class="num-label">${counter}</span>
       </div>
-      <div class="course-name">${r.nombre || ''}</div>
+      <div class="course-name">${escapeHtml(r.nombre || '')}</div>
       <div class="bottom-bar"></div>
     `;
 
@@ -2551,7 +2551,7 @@ async function openPartyPickerModal() {
                 <span style="display:flex;flex-direction:column;">
                   <b style="color:#fff">${escapeHtml(m.name)}</b>
                 </span>
-                <input type="radio" name="partyMemberPick" value="${m.uid}" ${m.uid===__partyViewingUid ? 'checked' : ''}/>
+                <input type="radio" name="partyMemberPick" value="${escapeHtml(m.uid)}" ${m.uid===__partyViewingUid ? 'checked' : ''}/>
               </label>
             `).join('')
             : `<div class="muted">No hay miembros de party disponibles </div>`
@@ -2580,6 +2580,11 @@ closePartyPickerModal();
 await watchPartnerMalla();
 document.dispatchEvent(new Event('malla:updated'));
   };
+}
+
+function safeMallaColor(value, fallback = '#888888') {
+  const s = String(value || '').trim();
+  return /^#[0-9A-Fa-f]{6}$/.test(s) ? s : fallback;
 }
 
 function escapeHtml(s){
@@ -3032,10 +3037,16 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // 🔁 También al cargar la página (por si recargas directamente en #/malla)
-document.addEventListener('DOMContentLoaded', () => {
-  if (isEditing()) return;  
+const restoreMallaOnReady = () => {
+  if (isEditing()) return;
   restaurarUltimaMalla();
-});
+};
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', restoreMallaOnReady, { once:true });
+} else {
+  restoreMallaOnReady();
+}
 
 document.addEventListener('malla:selector-ready', () => {
   if (isPartnerView()) return;
