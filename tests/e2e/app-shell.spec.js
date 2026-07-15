@@ -40,6 +40,19 @@ test.describe('PartyPlanner - smoke tests del shell público', () => {
     await expect(page.locator('#page-notas')).toBeHidden();
   });
 
+  test('permite cambiar entre modo oscuro y claro y recuerda la elección', async ({ page }) => {
+    await page.goto('/');
+
+    const root = page.locator('html');
+    await expect(root).toHaveAttribute('data-theme', 'dark');
+
+    await page.locator('#themeToggle').click();
+    await expect(root).toHaveAttribute('data-theme', 'light');
+
+    await page.reload();
+    await expect(root).toHaveAttribute('data-theme', 'light');
+  });
+
   test('incluye una política CSP base en el documento', async ({ page }) => {
     await page.goto('/');
     const csp = page.locator('meta[http-equiv="Content-Security-Policy"]');

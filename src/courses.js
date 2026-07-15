@@ -3,8 +3,8 @@ import { db } from './firebase.js';
 import { $, state } from './state.js';
 import { safeHexColor, escapeAttr } from './security/html.js';
 import {
-  collection, addDoc, onSnapshot, doc, deleteDoc, query, orderBy,
-  setDoc, getDoc, getDocs, where, serverTimestamp, Timestamp
+  collection, addDoc, onSnapshot, doc, deleteDoc,
+  setDoc, getDoc, getDocs, serverTimestamp, Timestamp
 } from 'firebase/firestore';
 
 // Escala por defecto según la universidad del semestre activo

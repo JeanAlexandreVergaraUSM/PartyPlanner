@@ -30,7 +30,7 @@ export async function canViewPartyZone(ownerUid, zone){
   try {
     const snap = await getDoc(viewerPrivacyRef(ownerUid, viewerUid));
     const rules = snap.exists() ? (snap.data() || {}) : {};
-    return !Boolean(rules?.[zone]);
+    return !rules?.[zone];
   } catch (err) {
     console.warn('[privacy] No se pudo revisar permiso; acceso denegado:', err);
     return false;

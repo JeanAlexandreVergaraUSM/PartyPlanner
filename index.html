@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="dark">
 <head>
 
 
@@ -1078,6 +1078,11 @@ input[type="date"] {
 </nav>
 
     <div class="auth-area">
+      <button id="themeToggle" class="btn btn-secondary theme-toggle" type="button" aria-label="Cambiar a modo claro" title="Cambiar a modo claro">
+        <span data-theme-icon aria-hidden="true">☀️</span>
+        <span data-theme-label>Modo claro</span>
+      </button>
+
       <button id="signInBtn" class="btn btn-secondary" style="padding:0.4rem 0.8rem">
         Iniciar sesión con Google
       </button>
@@ -1178,25 +1183,6 @@ input[type="date"] {
     </div>
   </div>
 
-  <div class="security-device-card" aria-labelledby="securityDeviceTitle">
-    <div>
-      <h3 id="securityDeviceTitle">🔒 Seguridad de este dispositivo</h3>
-      <p class="muted">
-        Por defecto PartyPlanner mantiene los datos de Firestore solo en memoria. Activa el modo confiable únicamente en un computador personal.
-      </p>
-    </div>
-
-    <label class="security-device-toggle">
-      <input id="pfTrustedDevice" type="checkbox" />
-      <span>Confiar en este dispositivo y permitir caché sin conexión</span>
-    </label>
-
-    <div id="pfTrustedDeviceStatus" class="muted" aria-live="polite"></div>
-
-    <button id="pfClearLocalCache" class="btn btn-secondary" type="button">
-      Borrar caché local de Firestore
-    </button>
-  </div>
 
   <div id="pfActions" style="margin-top: 2rem; display: flex; gap: 1rem;">
     <button id="pfSaveBtn" class="btn">💾 Guardar cambios</button>

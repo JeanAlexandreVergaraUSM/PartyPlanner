@@ -4,6 +4,10 @@ import { canViewPartyZone, privacyBlockedMessage } from './privacy.js';
 import { $, state } from './state.js';
 import { escapeHtml } from './security/html.js';
 import {
+  buildTaskCompletionFields,
+  isCalendarTaskCompleted,
+} from './calendarTasks.js';
+import {
   collection, addDoc, onSnapshot, doc, deleteDoc, query, orderBy, getDocs, getDoc, updateDoc, where
 } from 'firebase/firestore';
 
@@ -80,7 +84,7 @@ function getCourseColorById(courseId, fallback='#3B82F6'){
   const c = (state.courses || []).find(x => x.id === courseId);
   return isValidHex(c?.color) ? c.color : fallback;
 }
-function getSharedCourseColorById(courseId, fallback=partnerColor){
+function _getSharedCourseColorById(courseId, fallback=partnerColor){
   const c = (sharedCourses || []).find(x => x.id === courseId);
   return isValidHex(c?.color) ? c.color : fallback;
 }
@@ -743,7 +747,7 @@ unsubPartnerProfile = () => {
 };
 }
 
-async function autoSelectPartnerSemesterForCalendar(){
+async function _autoSelectPartnerSemesterForCalendar(){
   if (!__calendarPartyViewingUid) return null;
 
   const activeLabel = state.activeSemesterData?.label || null;
@@ -1022,12 +1026,22 @@ function mountModal() {
         </div>
       </div>
 
-      <div class="row" style="gap:10px; margin-top:8px">
-  <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
-    <input type="checkbox" id="calEvtIsPersonal" />
-    <span>Es evento personal</span>
-  </label>
-</div>
+      <div class="row" style="gap:16px; margin-top:8px">
+        <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+          <input type="checkbox" id="calEvtIsPersonal" />
+          <span>Es evento personal</span>
+        </label>
+
+        <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+          <input type="checkbox" id="calEvtIsTask" />
+          <span>Es una tarea</span>
+        </label>
+
+        <label id="calEvtCompletedWrap" class="calendar-task-option hidden">
+          <input type="checkbox" id="calEvtCompleted" />
+          <span>Completada</span>
+        </label>
+      </div>
 
       <div class="row" style="gap:10px; margin-top:8px">
         <div style="flex:1">
@@ -1072,29 +1086,38 @@ function mountModal() {
   $('calEvtCancel').addEventListener('click', close);
 
   const courseSel = $('calEvtCourse');
-const personalChk = $('calEvtIsPersonal');
+  const personalChk = $('calEvtIsPersonal');
+  const taskChk = $('calEvtIsTask');
+  const completedChk = $('calEvtCompleted');
+  const completedWrap = $('calEvtCompletedWrap');
 
+  function syncPersonalMode(){
+    if (!courseSel || !personalChk) return;
 
-function syncPersonalMode(){
-  if (!courseSel || !personalChk) return;
-
-  if (personalChk.checked) {
-    courseSel.value = '';
-    courseSel.disabled = true;
-    courseSel.style.opacity = '0.6';
-  } else {
-    courseSel.disabled = false;
-    courseSel.style.opacity = '1';
+    if (personalChk.checked) {
+      courseSel.value = '';
+      courseSel.disabled = true;
+      courseSel.style.opacity = '0.6';
+    } else {
+      courseSel.disabled = false;
+      courseSel.style.opacity = '1';
+    }
   }
-}
 
-personalChk?.addEventListener('change', syncPersonalMode);
-courseSel?.addEventListener('change', () => {
-  if (courseSel.value) {
-    personalChk.checked = false;
-    syncPersonalMode();
+  function syncTaskMode(){
+    const enabled = !!taskChk?.checked;
+    completedWrap?.classList.toggle('hidden', !enabled);
+    if (!enabled && completedChk) completedChk.checked = false;
   }
-});
+
+  personalChk?.addEventListener('change', syncPersonalMode);
+  taskChk?.addEventListener('change', syncTaskMode);
+  courseSel?.addEventListener('change', () => {
+    if (courseSel.value && personalChk) {
+      personalChk.checked = false;
+      syncPersonalMode();
+    }
+  });
 
   // 🔹 Guardar evento (nuevo o editado)
   $('calEvtSave').addEventListener('click', async () => {
@@ -1107,46 +1130,67 @@ courseSel?.addEventListener('change', () => {
     const date  = $('calEvtDate').value || '';
     const start = $('calEvtStart').value || null;
     const end   = $('calEvtEnd').value || null;
-const isPersonal = !!$('calEvtIsPersonal')?.checked;
-const courseId = isPersonal ? null : ($('calEvtCourse').value || null);
-const repeat = $('calEvtRepeat').value || '';
-const persistent = $('calEvtPersistent').value === 'true';
-const kind = isPersonal ? 'personal' : 'course';
-const color = courseId ? getCourseColorById(courseId) : getMyFavoriteColor();
+    const isPersonal = !!$('calEvtIsPersonal')?.checked;
+    const isTask = !!$('calEvtIsTask')?.checked;
+    const completed = isTask && !!$('calEvtCompleted')?.checked;
+    const courseId = isPersonal ? null : ($('calEvtCourse').value || null);
+    const repeat = $('calEvtRepeat').value || '';
+    const persistent = $('calEvtPersistent').value === 'true';
+    const kind = isPersonal ? 'personal' : 'course';
+    const color = courseId ? getCourseColorById(courseId) : getMyFavoriteColor();
 
     if (!title) return alert('Ingresa un título.');
     if (!date) return alert('Selecciona una fecha.');
 
     const editingId = wrapper.dataset.editingId || null;
+    const existingEvent = wrapper.__editingEvent || null;
+    const occurrenceDate = wrapper.dataset.editingOccurrenceDate || date;
+    const taskFields = buildTaskCompletionFields({
+      existingEvent,
+      occurrenceDate,
+      isTask,
+      completed,
+      repeatEvery: repeat,
+    });
     const ref = collection(db, 'users', state.currentUser.uid, 'semesters', state.activeSemesterId, 'calendar');
+
+    const payload = {
+      title,
+      date,
+      start,
+      end,
+      courseId,
+      kind,
+      color,
+      repeat: repeat ? { every: repeat, interval: 1 } : null,
+      persistent,
+      ...taskFields,
+    };
 
     try {
       if (editingId) {
         // ✏️ Modo edición
         await updateDoc(doc(ref, editingId), {
-          title, date, start, end, courseId, kind, color,
-          repeat: repeat ? { every: repeat, interval: 1 } : null,
-          persistent,
-          updatedAt: Date.now()
+          ...payload,
+          updatedAt: Date.now(),
         });
         console.log('[Calendar] Evento actualizado:', title);
       } else {
         // ➕ Nuevo evento
         await addDoc(ref, {
-          title, date, start, end, courseId, kind, color,
-          repeat: repeat ? { every: repeat, interval: 1 } : null,
-          persistent,
-          createdAt: Date.now()
+          ...payload,
+          createdAt: Date.now(),
         });
         console.log('[Calendar] Evento creado:', title);
       }
 
+      wrapper.dataset.editingId = '';
+      wrapper.dataset.editingOccurrenceDate = '';
+      wrapper.__editingEvent = null;
       close();
     } catch (err) {
       console.error(err);
-      alert('No se pudo guardar el evento.');
-    } finally {
-      wrapper.dataset.editingId = '';
+      alert('No se pudo guardar el evento. Revisa tu conexión e inténtalo nuevamente.');
     }
   });
 }
@@ -1266,7 +1310,11 @@ function openModalFor(dateStr){
   const titleEl = $('calModalTitle');
   const saveBtn = $('calEvtSave');
 
-  if (modal) modal.dataset.editingId = '';
+  if (modal) {
+    modal.dataset.editingId = '';
+    modal.dataset.editingOccurrenceDate = '';
+    modal.__editingEvent = null;
+  }
   if (titleEl) titleEl.textContent = 'Nuevo evento';
   if (saveBtn) saveBtn.textContent = 'Guardar';
 
@@ -1285,6 +1333,13 @@ function openModalFor(dateStr){
   }
   const personalChk = $('calEvtIsPersonal');
   if (personalChk) personalChk.checked = false;
+
+  const taskChk = $('calEvtIsTask');
+  const completedChk = $('calEvtCompleted');
+  const completedWrap = $('calEvtCompletedWrap');
+  if (taskChk) taskChk.checked = false;
+  if (completedChk) completedChk.checked = false;
+  completedWrap?.classList.add('hidden');
 
   if (sel) {
     sel.disabled = false;
@@ -1361,6 +1416,8 @@ function openModalForEdit(ev) {
   const titleEl = $('calModalTitle');
   const saveBtn = $('calEvtSave');
   modal.dataset.editingId = ev.id; // <- guardamos el ID a editar
+  modal.dataset.editingOccurrenceDate = ev.date || '';
+  modal.__editingEvent = ev;
 
   // Cambiar textos
   titleEl.textContent = 'Editar evento';
@@ -1390,6 +1447,14 @@ const inferredKind = ev.kind || (ev.courseId ? 'course' : 'personal');
 if (personalChk) {
   personalChk.checked = inferredKind === 'personal';
 }
+
+const taskChk = $('calEvtIsTask');
+const completedChk = $('calEvtCompleted');
+const completedWrap = $('calEvtCompletedWrap');
+const isTask = ev.isTask === true;
+if (taskChk) taskChk.checked = isTask;
+if (completedChk) completedChk.checked = isCalendarTaskCompleted(ev, ev.date);
+completedWrap?.classList.toggle('hidden', !isTask);
 
 if (sel) {
   if (inferredKind === 'personal') {
@@ -1483,6 +1548,55 @@ function buildCombinedMonthGrid(){
   paintCombinedEvents();
 }
 
+function createTaskMarker(ev, { interactive = false } = {}){
+  if (!ev?.isTask) return null;
+
+  const completed = isCalendarTaskCompleted(ev, ev.date);
+  const marker = document.createElement(interactive ? 'button' : 'span');
+  marker.className = `cal-task-check ${completed ? 'is-complete' : ''}`;
+  marker.textContent = completed ? '✓' : '';
+  marker.title = completed ? 'Marcar tarea como pendiente' : 'Marcar tarea como completada';
+  marker.setAttribute('aria-label', marker.title);
+
+  if (interactive) {
+    marker.type = 'button';
+    marker.addEventListener('click', async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (!state.currentUser || !state.activeSemesterId || !ev.id) return;
+
+      marker.disabled = true;
+      const nextCompleted = !isCalendarTaskCompleted(ev, ev.date);
+      const taskFields = buildTaskCompletionFields({
+        existingEvent: ev,
+        occurrenceDate: ev.date,
+        isTask: true,
+        completed: nextCompleted,
+        repeatEvery: ev.repeat?.every || '',
+      });
+
+      try {
+        await updateDoc(
+          doc(db, 'users', state.currentUser.uid, 'semesters', state.activeSemesterId, 'calendar', ev.id),
+          { ...taskFields, updatedAt: Date.now() },
+        );
+      } catch (err) {
+        console.error('[Calendar] No se pudo actualizar la tarea:', err);
+        alert('No se pudo actualizar el estado de la tarea.');
+        marker.disabled = false;
+      }
+    });
+  }
+
+  return marker;
+}
+
+function applyTaskCompletedStyle(chip, titleNode, ev){
+  const completed = isCalendarTaskCompleted(ev, ev.date);
+  chip.classList.toggle('cal-task-completed', completed);
+  titleNode?.classList.toggle('cal-task-title-completed', completed);
+}
+
 function paintCombinedEvents(){
   document.querySelectorAll('.cal-events').forEach(c => {
     if (c.id?.startsWith('bce-')) c.innerHTML = '';
@@ -1490,7 +1604,7 @@ function paintCombinedEvents(){
 
   const ym = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth()+1).padStart(2,'0')}`;
 
-  const ownMonthEvents = events
+  const ownMonthEvents = expandRecurringEvents(events)
     .filter(ev => String(ev.date || '').startsWith(ym))
     .map(ev => ({
       ...ev,
@@ -1517,16 +1631,10 @@ function paintCombinedEvents(){
     const cont = $('bce-' + ev.date);
     if (!cont) return;
 
-    let color = '#64748b';
-
- if (ev.isMine){
-  // ✅ En combinado, mis eventos usan mi color favorito, no color de ramo
-  color = getMyFavoriteColor();
-} else {
-  // ✅ En combinado, los de la party usan su color favorito
-  const prof = __calendarPartyProfileCache[ev.ownerUid] || {};
-  color = isValidHex(prof.favoriteColor) ? prof.favoriteColor : '#64748b';
-}
+    const prof = __calendarPartyProfileCache[ev.ownerUid] || {};
+    const color = ev.isMine
+      ? getMyFavoriteColor()
+      : (isValidHex(prof.favoriteColor) ? prof.favoriteColor : '#64748b');
 
     const text = bestText(color);
     const time = (ev.start && ev.end) ? `${ev.start}–${ev.end} · `
@@ -1534,11 +1642,20 @@ function paintCombinedEvents(){
 
     const chip = document.createElement('div');
     chip.className = 'cal-evt';
-    chip.textContent = `${time}${ev.title || '(sin título)'}`;
     chip.style.background = color;
     chip.style.color = text;
     chip.style.opacity = ev.isMine ? 1 : 0.75;
     chip.style.border = '1px solid rgba(0,0,0,0.25)';
+
+    const taskMarker = createTaskMarker(ev, { interactive: ev.isMine });
+    if (taskMarker) chip.appendChild(taskMarker);
+
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'cal-evt-title';
+    titleSpan.textContent = `${time}${ev.title || '(sin título)'}`;
+    chip.appendChild(titleSpan);
+    applyTaskCompletedStyle(chip, titleSpan, ev);
+
     cont.appendChild(chip);
   });
 }
@@ -1812,10 +1929,15 @@ monthEvents = monthEvents.filter(ev => {
     chip.style.position = 'relative';
     chip.style.cursor = 'pointer';
 
+    const taskMarker = createTaskMarker(ev, { interactive: true });
+    if (taskMarker) chip.appendChild(taskMarker);
+
     // 🔹 texto principal
     const titleSpan = document.createElement('span');
+    titleSpan.className = 'cal-evt-title';
     titleSpan.textContent = `${time}${ev.title || '(sin título)'}`;
     chip.appendChild(titleSpan);
+    applyTaskCompletedStyle(chip, titleSpan, ev);
 
     // 🔹 botón eliminar (X)
     const delBtn = document.createElement('span');
@@ -1872,10 +1994,19 @@ function paintSharedEvents(){
 
     const chip = document.createElement('div');
     chip.className = 'cal-evt';
-    chip.textContent = `${time}${ev.title || '(sin título)'}`;
     chip.style.background = color;
     chip.style.color = text;
     chip.style.border = '1px solid rgba(0,0,0,0.25)';
+
+    const taskMarker = createTaskMarker(ev, { interactive: false });
+    if (taskMarker) chip.appendChild(taskMarker);
+
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'cal-evt-title';
+    titleSpan.textContent = `${time}${ev.title || '(sin título)'}`;
+    chip.appendChild(titleSpan);
+    applyTaskCompletedStyle(chip, titleSpan, ev);
+
     cont.appendChild(chip);
   });
 }
@@ -1885,7 +2016,7 @@ function addMonths(d, n){
   return new Date(d.getFullYear(), d.getMonth() + n, 1);
 }
 function isoDate(y, m, d){ return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
-function addUnits(baseDate, unit, count) {
+function _addUnits(baseDate, unit, count) {
   const d = new Date(baseDate.getTime());
   switch (unit) {
     case 'day':
@@ -2148,9 +2279,6 @@ const GAPI_DISCOVERY_DOCS = [
 ];
 const GAPI_SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
 
-let gapiLoadPromise = null;
-let gcalClientInited = false;
-
 let gapiInited = false;
 let gisInited  = false;
 let tokenClient = null;
@@ -2392,7 +2520,7 @@ async function importGoogleCalendarRange(timeMin, timeMax){
 }
 
 // wrapper opcional si algún día quieres seguir usando "mes actual"
-async function importGoogleCalendarForCurrentMonth(){
+async function _importGoogleCalendarForCurrentMonth(){
   const y = currentMonth.getFullYear();
   const m = currentMonth.getMonth();
   const timeMin = new Date(y, m, 1, 0, 0, 0);

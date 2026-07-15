@@ -162,7 +162,7 @@ async function renderPartyMembers() {
 
   host.innerHTML = html;
 
-  const isHost = state.currentUser.uid === state.partyMembers[0];
+  const _isHost = state.currentUser.uid === state.partyMembers[0];
 
 
 
@@ -681,8 +681,8 @@ function updateClosePartyButton() {
     return;
   }
 
-  const isHost = state.currentUser.uid === state.partyMembers[0];
-  btn.style.display = isHost ? "inline-flex" : "none";
+  const _isHost = state.currentUser.uid === state.partyMembers[0];
+  btn.style.display = _isHost ? "inline-flex" : "none";
 }
 
 function updatePartyCount() {

@@ -2,7 +2,7 @@
 // “Herramientas” deterministas conectadas a Firestore y tu state.
 
 import { db } from '../firebase.js';
-import { state, $ } from '../state.js';
+import { state } from '../state.js';
 import { USM_SLOTS, MAYOR_SLOTS } from '../schedule.js';
 import * as grades from '../grades.js';
 import * as progreso from '../progreso.js';
@@ -14,7 +14,7 @@ import * as exporter from '../export.js';
 import { getPrereqs } from '../malla.js';
 
 import {
-  collection, getDocs, addDoc, deleteDoc, doc
+  collection, getDocs
 } from 'firebase/firestore';
 
 // ---------- helpers ----------
@@ -120,7 +120,7 @@ export const tools = {
 
     grade_add: async ({ course, rule, valor, comentario }) => {
   try {
-    const ok = await courses.addGrade(course, rule, valor, comentario);
+    await courses.addGrade(course, rule, valor, comentario);
     return { ok: true, valor, rule, comentario };
   } catch (e) {
     console.error(e);
@@ -191,10 +191,6 @@ rules_list_grades: async ({ course, tipo }) => {
   grade_best_worst() {
     return grades.bestWorst(state.activeSemesterId); // { best, worst }
   },
-  export_grades({ scope='actual', course=null, fromSem=null, toSem=null, format='pdf' }){
-    return { directive:'export_grades', scope, course, fromSem, toSem, format };
-  },
-
   // ---------- Horario ----------
   sched_view(){
     const el = document.getElementById('schedUSM');
@@ -350,8 +346,6 @@ sched_get_room_pair: async ({ course, semId = null }) => {
     try { return await schedule.overlapWithPair(); }
     catch(e){ console.error(e); return { items:[], error:e.message }; }
   },
-  export_schedule({ format='png' }){ return { directive:'export_schedule', format }; },
-
   // ---------- Malla / Progreso ----------
 curr_prereqs({ course }) {
   try {
@@ -387,8 +381,6 @@ curr_pair_level: async () => {
   catch(e){ return { level:null, error:e.message }; }
 },
 
-
-  export_malla({ format='png' }){ return { directive:'export_malla', format }; },
 
   // ---------- Calendario ----------
 cal_create: async ({ title, datetime, recurrence }) => {

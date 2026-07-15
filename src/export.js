@@ -450,7 +450,7 @@ function grxRenderSemesterChecks(items){
 }
 
 function grxBuildFilename(uni, semesters){
-  const semPart = semesters.map(s => s.label).join('_').replace(/[^\w\-]+/g,'_');
+  const semPart = semesters.map(s => s.label).join('_').replace(/[^\w-]+/g,'_');
   return `notas_${uni}_${semPart || 'semestres'}.pdf`;
 }
 
@@ -461,8 +461,8 @@ function grxNeedNewPage(pdf, y, needed, pageHeight){
 }
 
 function grxDrawSemesterBlock(pdf, report, startY){
-  const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
+  const pageWidth = pdf.internal.pageSize.getWidth();
   const contentWidth = pageWidth - 88;
   let y = startY;
 
@@ -519,7 +519,6 @@ function grxDrawSemesterBlock(pdf, report, startY){
 async function grxGeneratePdf(universityCode, semesterReports){
   const { jsPDF } = await loadExportDeps();
   const pdf = new jsPDF({ unit:'pt', format:'a4' });
-  const pageWidth = pdf.internal.pageSize.getWidth();
 
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(19);

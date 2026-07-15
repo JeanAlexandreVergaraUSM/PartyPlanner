@@ -316,7 +316,9 @@ function gr_collectEvaluationsForSim(){
 function bindUi(){
   hideThresholdUi();
 
-  $('gr-saveExpr')?.addEventListener('click', saveExpr);
+  $('gr-saveExpr')?.addEventListener('click', () => {
+    saveExpr().catch(err => console.error('saveExpr', err));
+  });
   $('gr-finalExpr')?.addEventListener('keydown', (e)=>{
     if (e.key === 'Enter') { e.preventDefault(); saveExpr(); }
   });
@@ -327,6 +329,7 @@ $('gr-addEvalBtn')?.addEventListener('click', addEvalFromForm);
 
   // Crear la sección Reglas dentro de #page-notas (aunque esté oculta)
   ensureRulesUI();
+  bindRulesEditor();
 
 function ensureSimButton(){
   const pageNotas = $('page-notas');
@@ -464,6 +467,56 @@ if (f){
 
 }
 
+function setRulesSaveStatus(message, stateName = ''){
+  const el = $('gr-rulesSaveState');
+  if (!el) return;
+
+  el.textContent = message || '';
+  el.dataset.saveState = stateName;
+}
+
+function bindRulesEditor(){
+  const rulesEl = $('gr-rulesText');
+  if (!rulesEl || rulesEl.dataset.boundRulesEditor === '1') return;
+
+  rulesEl.dataset.boundRulesEditor = '1';
+
+  const debouncedSave = debounce(async (courseIdAtTyping, textAtTyping) => {
+    if (!courseIdAtTyping || courseIdAtTyping !== currentCourseId) return;
+    await saveRules(courseIdAtTyping, textAtTyping);
+  }, 700);
+
+  const syncRulesLive = () => {
+    if (!currentCourseId) return;
+
+    const live = rulesEl.value || '';
+    header.rulesText = live;
+
+    const prev = _courseHeaderCache.get(currentCourseId) || {};
+    _courseHeaderCache.set(currentCourseId, {
+      ...prev,
+      ...header,
+      rulesText: live,
+    });
+
+    setRulesSaveStatus('Cambios sin guardar…', 'dirty');
+    computeAndRender();
+  };
+
+  rulesEl.addEventListener('input', () => {
+    const courseIdAtTyping = currentCourseId;
+    const textAtTyping = rulesEl.value || '';
+    syncRulesLive();
+    debouncedSave(courseIdAtTyping, textAtTyping);
+  });
+
+  rulesEl.addEventListener('blur', async () => {
+    if (!currentCourseId) return;
+    syncRulesLive();
+    await saveRules(currentCourseId, rulesEl.value || '');
+  });
+}
+
 function setupFinalAutocomplete(){ /* TODO: implementar */ }
 
 
@@ -496,7 +549,10 @@ function ensureRulesUI(){
     <div class="row" style="align-items:flex-start;margin-top:8px">
       <textarea id="gr-rulesText" rows="4" style="flex:1 1 520px;min-height:86px;background:#0e1120;border:1px solid var(--line);color:var(--ink);padding:8px 10px;border-radius:10px"></textarea>
       <div id="gr-formulaError" class="muted" style="margin-top:6px;color:#fca5a5"></div>
-      <button id="gr-saveRules" class="primary">Guardar reglas</button>
+      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+        <button id="gr-saveRules" class="primary" type="button">Guardar reglas</button>
+        <span id="gr-rulesSaveState" class="muted" aria-live="polite"></span>
+      </div>
     </div>
     <div id="gr-rulesStatus" class="muted" style="margin-top:6px"></div>
   `;
@@ -513,7 +569,9 @@ function ensureRulesUI(){
     pageNotas.appendChild(card);
   }
 
-  $('gr-saveRules')?.addEventListener('click', saveRules);
+  $('gr-saveRules')?.addEventListener('click', () => {
+    saveRules().catch(err => console.error('saveRules', err));
+  });
 }
 
 
@@ -585,9 +643,12 @@ async function onCourseChange(e){
 
   // Guardar el ramo anterior en background (sin bloquear)
   if (prevCourseId && prevCourseId !== nextCourseId) {
+    const previousExpr = $('gr-finalExpr')?.value ?? header.finalExpr ?? '';
+    const previousRules = $('gr-rulesText')?.value ?? header.rulesText ?? '';
+
     Promise.all([
-      saveExpr(prevCourseId),
-      saveRules(prevCourseId)
+      saveExpr(prevCourseId, previousExpr),
+      saveRules(prevCourseId, previousRules),
     ]).catch(err => console.warn('No se pudo guardar antes de cambiar de ramo:', err));
   }
 
@@ -721,20 +782,12 @@ async function loadGradingDoc(){
 
   const semScale = state.activeSemesterData?.gradeScale || null;
   const uniReadable = state.activeSemesterData?.universityAtThatTime || '';
-  let uniScale = null;
-
-  if (semScale) {
-    uniScale = semScale === '1-7' || semScale === '2-7' || semScale === '0-7' ? 'MAYOR' : 'USM';
-  } else {
-    const stored = localStorage.getItem(`scale_${uniReadable}`);
-    if (stored) {
-      uniScale = stored.includes('7') ? 'MAYOR' : 'USM';
-    } else {
-      uniScale = /mayor/i.test(uniReadable) ? 'MAYOR'
-               : /usm|utfsm|santa\s*mar/i.test(uniReadable) ? 'USM'
-               : 'USM';
-    }
-  }
+  const storedScale = localStorage.getItem(`scale_${uniReadable}`);
+  const uniScale = semScale
+    ? ((semScale === '1-7' || semScale === '2-7' || semScale === '0-7') ? 'MAYOR' : 'USM')
+    : storedScale
+      ? (storedScale.includes('7') ? 'MAYOR' : 'USM')
+      : (/mayor/i.test(uniReadable) ? 'MAYOR' : 'USM');
 
   const snap = await getDoc(gRef);
 
@@ -798,12 +851,12 @@ if (courseIdAtLoad === currentCourseId) {
 // Fix: sincroniza header.finalExpr desde el INPUT (no desde la variable),
 // y siempre recalcula si es el ramo activo.
 
-async function saveExpr(courseIdOverride = null){
-  const courseId = courseIdOverride || currentCourseId;
+async function saveExpr(courseIdOverride = null, exprOverride = undefined){
+  const courseId = typeof courseIdOverride === 'string' ? courseIdOverride : currentCourseId;
   if (!(state.currentUser && state.activeSemesterId && courseId)) return;
 
   const el  = $('gr-finalExpr');
-  const raw = (el?.value || '').trim();
+  const raw = String(exprOverride !== undefined ? exprOverride : (el?.value || '')).trim();
   const expr = normalizeExpr(raw) || null;
 
   // ✅ Siempre actualizar header en memoria si es el ramo visible
@@ -837,11 +890,14 @@ async function saveExpr(courseIdOverride = null){
 // =================== REEMPLAZA saveRules ===================
 // Fix: mismo patrón que saveExpr — sincroniza y recalcula en vivo.
 
-async function saveRules(courseIdOverride = null){
-  const courseId = courseIdOverride || currentCourseId;
+async function saveRules(courseIdOverride = null, rulesTextOverride = undefined){
+  const courseId = typeof courseIdOverride === 'string' ? courseIdOverride : currentCourseId;
   if (!(state.currentUser && state.activeSemesterId && courseId)) return;
 
-  const txt = ($('gr-rulesText')?.value || '').trim() || null;
+  const rawRules = rulesTextOverride !== undefined
+    ? String(rulesTextOverride)
+    : String($('gr-rulesText')?.value || '');
+  const txt = rawRules.trim() || null;
 
   // ✅ Siempre actualizar header en memoria si es el ramo visible
   if (courseId === currentCourseId) {
@@ -857,11 +913,21 @@ async function saveRules(courseIdOverride = null){
     'grading', 'meta'
   );
 
-  await setDoc(ref, { rulesText: txt }, { merge: true });
+  if (courseId === currentCourseId) setRulesSaveStatus('Guardando…', 'saving');
 
-  // Las reglas no cambian las notas finales cruzadas, así que no releemos otros ramos.
-  if (courseId === currentCourseId) {
-    computeAndRender();
+  try {
+    await setDoc(ref, { rulesText: txt }, { merge: true });
+
+    // Las reglas no cambian las notas finales cruzadas, así que no releemos otros ramos.
+    if (courseId === currentCourseId) {
+      computeAndRender();
+      setRulesSaveStatus('Reglas guardadas ✓', 'saved');
+    }
+  } catch (err) {
+    if (courseId === currentCourseId) {
+      setRulesSaveStatus('No se pudieron guardar las reglas.', 'error');
+    }
+    throw err;
   }
 }
 
@@ -1000,7 +1066,7 @@ async function addEvalFromForm(){
 }
 
 
-async function addComponentPrompt(){
+async function _addComponentPrompt(){
   if (!readyPath()) return;
 
   const name = prompt('Nombre del componente (ej: "Presentación Individual 1"):\nSe generará una abreviación para la fórmula.');
@@ -1504,7 +1570,7 @@ if (currentCourseId) {
     values.Asistencia = 0;
   }
 
-  let final = null;
+  let final;
   let lastErr = '';
 
  if (liveExpr.trim() !== '') {
@@ -1540,14 +1606,11 @@ if (currentCourseId) {
   const rules = parseRules(liveRules);
   const rulesEval = evaluateRules(rules, values);
 
-  let status = null;
-  if (final == null) {
-    status = rulesEval.allOk ? '—' : 'Reprueba';
-  } else {
-    status = (final >= thr && rulesEval.allOk) ? 'Aprueba' : 'Reprueba';
-  }
+  const status = final == null
+    ? (rulesEval.allOk ? '—' : 'Reprueba')
+    : ((final >= thr && rulesEval.allOk) ? 'Aprueba' : 'Reprueba');
 
-  let needed = '—';
+  let needed;
   if (final == null){
     needed = 'Ingresa notas o completa la fórmula.';
   } else if (status === 'Aprueba'){
@@ -1728,7 +1791,9 @@ function evaluateRules(lines, vars, fns){
       continue;
     }
     const { left, op, right } = parsed;
-    let lv = null, rv = null, ok = false;
+    let lv;
+    let rv;
+    let ok;
     try{
       
       const baseFns = { avg, min: Math.min, max: Math.max,
@@ -1937,7 +2002,7 @@ function gr_getFormulaStr() {
 function gr_readRulesText() {
   return (document.getElementById('gr-rulesText')?.value || '').trim();
 }
-function gr_parseRulesArr() {
+function _gr_parseRulesArr() {
   const t = gr_readRulesText();
   if (!t) return [];
   return t.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
@@ -1945,7 +2010,7 @@ function gr_parseRulesArr() {
 
 // Intenta leer evaluaciones + notas actuales desde la UI de Notas.
 // Ajusta los selectores si tus inputs usan otros ids/clases.
-function gr_collectEvaluationsFromUI() {
+function _gr_collectEvaluationsFromUI() {
   // Esperamos filas con inputs de Código y Nota (ej. "C1" y "62" o "5.5")
   // Fallback genérico:
   const rows = Array.from(document.querySelectorAll('[data-gr-eval-row], .gr-eval-row'));
@@ -1977,7 +2042,7 @@ function debounce(fn, ms){
 function readyPath(){
   return !!(state.currentUser && state.activeSemesterId && currentCourseId);
 }
-function parseMaybe(x){
+function _parseMaybe(x){
   const v = parseFloat(x); return isNaN(v)? null : v;
 }
 function esc(s){ return (s??'').toString().replace(/[<>&"]/g, m=>({ '<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;' }[m])); }
@@ -2014,7 +2079,7 @@ function autoQuoteFunctionArgs(s){
 
 
 // Convierte % solo para evaluar (20% -> (20/100))
-function prepareForEval(expr){
+function _prepareForEval(expr){
   if (!expr) return '';
   return expr.replace(/(\d+(?:\.\d+)?)\s*%/g, (_, n) => `(${n}/100)`);
 }
@@ -2643,7 +2708,7 @@ async function gr_openPartyCourseDetails(courseId){
   });
 })();
 
-function valsFromComps(comps, meta){
+function _valsFromComps(comps, meta){
   const vals = {};
   const isMayor = (meta.scale==='MAYOR');
   const min = isMayor ? 1 : 0;
@@ -2837,7 +2902,7 @@ function gr_openSimDrawer({ formula, evals }) {
   // Cerrar (compartido por botón, ESC y click en backdrop)
 const doClose = async () => {
   const snap = recompute();
-  let last = null;
+  let last;
 
   try {
     last = await gr_loadLastSimulation();
@@ -3047,7 +3112,8 @@ for (const m of nameRefs) {
       map[c] = (Number.isFinite(n) ? n : 0);
     });
 
-    let result = null, err = null;
+    let result;
+    let err = null;
     try {
       result = safeEvalExpr(formula, { ...map }, {
   avg,
@@ -3072,7 +3138,7 @@ const rulesEval = evaluateRules(rules, map);
 const thr = (header.scale === 'MAYOR') ? 3.95 : 54.5;
 
 // Mensaje de “necesitas”
-let needMsg = '';
+let needMsg;
 if (err) {
   needMsg = '';
 } else if (result == null) {
@@ -3326,7 +3392,6 @@ export function calcNotaMinima(ramo) {
   const notaAprob = (scale === 'MAYOR') ? 4.0 : 55;
 
   let acumulado = 0;
-  let pesoAcumulado = 0;
   let pesoExamen = 0;
 
   for (const r of (ramo.rules || [])) {
@@ -3338,7 +3403,6 @@ export function calcNotaMinima(ramo) {
     if (r.notas?.length) {
       const avg = r.notas.reduce((a,b)=>a+b,0)/r.notas.length;
       acumulado += avg * (peso/100);
-      pesoAcumulado += peso;
     }
   }
 

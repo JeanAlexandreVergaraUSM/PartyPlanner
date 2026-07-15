@@ -4,7 +4,7 @@
 
 const DAYS_RX = /(lunes|martes|mi[eé]rcoles|jueves|viernes)/i;
 
-export function detectIntent(text, route = '#/') {
+export function detectIntent(text, _route = '#/') {
   const q = norm(text);
 
   // Cuenta
@@ -105,8 +105,9 @@ export function extractSlots(text, intent) {
     case 'sched_gaps_day':
     case 'sched_end_time':
     case 'sched_count_day':
+      return { day };
 
-        case 'sched_set_room': {
+    case 'sched_set_room': {
       // Extraer curso
       const courseMatch = raw.match(/sala de ([^ ]+(?: [^ ]+)?)/i);
       const course = courseMatch ? courseMatch[1].trim() : null;
@@ -298,7 +299,7 @@ export function chipsForRoute(route = '#/') {
 function norm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
 function guessCourse(raw){
   // Heurística mínima: mayúsculas/palabras con números romanos o II/III.
-  const m = raw.match(/[A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÑñ0-9\s\-]*(I|II|III|IV|V)?/g);
+  const m = raw.match(/[A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÑñ0-9\s-]*(I|II|III|IV|V)?/g);
   if (m && m[0]) return m[0].trim();
   return null;
 }

@@ -3,17 +3,12 @@ import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth'
 import {
   initializeFirestore,
   memoryLocalCache,
-  persistentLocalCache,
-  persistentMultipleTabManager,
   clearIndexedDbPersistence,
-  terminate,
-  waitForPendingWrites,
 } from 'firebase/firestore';
 import {
   initializeAppCheck,
   ReCaptchaEnterpriseProvider,
 } from 'firebase/app-check';
-import { isTrustedDevice, setTrustedDevicePreference } from './security/deviceTrust.js';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyB45g_2KRGlXH0iAPyBGuCnrFkhxCHadKs',
@@ -51,45 +46,60 @@ if (appCheckSiteKey) {
   console.warn('[Security] App Check preparado pero no activo: falta VITE_FIREBASE_APP_CHECK_SITE_KEY.');
 }
 
-/* ================= Firestore cache policy ================= */
-export const persistentCacheEnabled = isTrustedDevice();
-
+/* ================= Firestore: siempre en línea ================= */
+// PartyPlanner no ofrece modo offline. Firestore conserva únicamente una caché
+// temporal en memoria mientras la pestaña está abierta. Los archivos estáticos
+// de la web pueden seguir usando la caché normal del navegador.
 export const db = initializeFirestore(app, {
-  localCache: persistentCacheEnabled
-    ? persistentLocalCache({ tabManager: persistentMultipleTabManager() })
-    : memoryLocalCache(),
+  localCache: memoryLocalCache(),
 });
+
+const LEGACY_TRUSTED_DEVICE_KEY = 'partyplanner:trusted-device:v1';
+const MEMORY_ONLY_MIGRATION_KEY = 'partyplanner:memory-only-cache:v1';
+
+function safeLocalStorage(){
+  try {
+    return typeof window !== 'undefined' ? window.localStorage : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Limpieza única para navegadores que usaron la antigua caché persistente.
+ * Debe resolverse antes de iniciar listeners o lecturas de Firestore.
+ */
+export const firestoreReady = (async () => {
+  const storage = safeLocalStorage();
+  const alreadyMigrated = storage?.getItem(MEMORY_ONLY_MIGRATION_KEY) === 'done';
+
+  if (alreadyMigrated) return;
+
+  try {
+    await clearIndexedDbPersistence(db);
+  } catch (err) {
+    // Puede fallar si otra pestaña antigua mantiene Firestore abierto. La app
+    // igualmente usa memoryLocalCache desde esta versión y reintentará en el
+    // próximo inicio hasta completar la migración.
+    const code = String(err?.code || '');
+    if (!code.includes('failed-precondition') && !code.includes('unimplemented')) {
+      console.warn('[Firestore] No se pudo limpiar la caché persistente anterior:', err);
+    }
+    return;
+  }
+
+  try {
+    storage?.removeItem(LEGACY_TRUSTED_DEVICE_KEY);
+    storage?.setItem(MEMORY_ONLY_MIGRATION_KEY, 'done');
+  } catch {
+    // La política de memoria sigue activa aunque localStorage no esté disponible.
+  }
+})();
 
 /* ================= Auth ================= */
 export const auth = getAuth(app);
 setPersistence(auth, browserLocalPersistence).catch((err) => {
   console.warn('[Auth] No se pudo activar persistencia local de sesión:', err?.code || err);
 });
-
-/**
- * Cambia la preferencia de dispositivo confiable. El cambio se aplica al
- * reiniciar la app porque Firestore decide el tipo de caché al inicializarse.
- */
-export function updateTrustedDevicePreference(enabled){
-  return setTrustedDevicePreference(!!enabled);
-}
-
-/**
- * Borra la caché persistente de Firestore de este navegador y recarga.
- * Se usa solo por acción explícita del usuario.
- */
-export async function clearLocalFirestoreCache(){
-  try {
-    await Promise.race([
-      waitForPendingWrites(db),
-      new Promise(resolve => setTimeout(resolve, 2500)),
-    ]).catch(() => {});
-
-    await terminate(db);
-    await clearIndexedDbPersistence(db);
-  } finally {
-    location.reload();
-  }
-}
 
 export { app };

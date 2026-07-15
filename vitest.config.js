@@ -13,7 +13,9 @@ export default defineConfig({
       include: [
         'src/security/safeExpression.js',
         'src/security/html.js',
-        'src/security/deviceTrust.js',
+        'src/theme.js',
+        'src/scheduleLayout.js',
+        'src/calendarTasks.js',
         'src/router.js',
       ],
       thresholds: {
