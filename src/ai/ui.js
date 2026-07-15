@@ -4,7 +4,6 @@
 
 import { detectIntent, extractSlots, chipsForRoute } from './router.js';
 import { tools } from './tools.js';
-import { humanize } from './humanize.js';
 import { secureApiFetch } from '../security/secureApiFetch.js';
 import { $ } from '../state.js';
 import { state } from '../state.js';
@@ -135,14 +134,6 @@ async function askAI(question) {
   }
 }
 
-function getUid() {
-  return state.currentUser?.uid || null;
-}
-
-function getActiveSemesterId() {
-  return state.activeSemesterId || null;
-}
-
 /* ---------------- Render mensajes ---------------- */
 function msgEl(role, text) {
   const div = document.createElement('div');
@@ -205,7 +196,8 @@ async function onSend() {
   const intent = detectIntent(q, route);
   const slots = extractSlots(q, intent);
 
-  let reply = null, data = null;
+  let reply;
+  let data = null;
   try {
     data = await askAI(q);
     reply = data.answer || 'Sin respuesta.';

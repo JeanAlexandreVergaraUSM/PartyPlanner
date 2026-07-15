@@ -2,7 +2,7 @@
 import { db } from './firebase.js';
 import { $, state } from './state.js';
 import { escapeHtml, escapeAttr } from './security/html.js';
-import { collection, doc, onSnapshot, getDocs, updateDoc, addDoc, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, doc, onSnapshot, getDocs, setDoc, deleteDoc } from 'firebase/firestore';
 
 let unsubAttendance = null;
 let unsubSelectedAttendance = null;

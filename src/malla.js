@@ -3,7 +3,7 @@ import { $, state } from './state.js';
 window.state = state;
 import { db } from './firebase.js';
 import { canViewPartyZone, privacyBlockedMessage } from './privacy.js';
-import { doc, setDoc,addDoc,deleteDoc, onSnapshot, getDoc, collection, getDocs } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, onSnapshot, getDoc, collection, getDocs } from 'firebase/firestore';
 
 // Cache en memoria para mallas personalizadas del dúo
 const duoCustomCache = new Map(); // nombre -> objeto malla
@@ -15,7 +15,7 @@ function lsSet(key, obj){ localStorage.setItem(key, JSON.stringify(obj)); }
 
 
 // Utils locales seguros (defínelos una sola vez en el archivo)
-const ROMANS = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
+const _ROMANS = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
 
 // 🔇 arriba en el archivo
 let __muteSemesterChanged = 0;
@@ -31,7 +31,7 @@ function safeInt(v, def=1){
   return Number.isFinite(n) && n > 0 ? n : def;
 }
 
-function areaSlug(name){
+function _areaSlug(name){
   return String(name || '').toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
     .replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'');
@@ -74,17 +74,249 @@ function writeCustomStore(mutatorFn) {
   return next;
 }
 
-// Sincroniza en Firestore qué malla tiene activa el usuario
+let lastKnownCloudSelection = null;
+
+// Sincroniza en Firestore qué malla tiene activa el usuario.
+// Además de mantener compatibilidad con el documento raíz del usuario,
+// guarda la selección en users/{uid}/malla/state para que otro dispositivo
+// pueda restaurar exactamente la misma vista.
 async function syncActiveMallaToProfile(label, isCustom) {
   const uid = state.currentUser?.uid;
   if (!uid) return;
+
+  const university = state.profileData?.university || '';
+  const career = state.profileData?.career || '';
+  const normalizedLabel = label || null;
+  const custom = !!isCustom;
+  const selectionKey = `${normalizedLabel || ''}|${custom ? '1' : '0'}|${career}|${university}`;
+
+  // Evita un ciclo entre onSnapshot → render → sincronización cuando la
+  // selección ya coincide con la que está guardada en Firestore.
+  if (selectionKey === lastKnownCloudSelection) return;
+
   try {
-    await setDoc(doc(db, 'users', uid), {
-      ultima_malla_seleccionada: label || null,
-      ultima_malla_es_custom: !!isCustom
-    }, { merge: true });
+    await Promise.all([
+      setDoc(doc(db, 'users', uid), {
+        ultima_malla_seleccionada: normalizedLabel,
+        ultima_malla_es_custom: custom,
+      }, { merge: true }),
+      setDoc(doc(db, 'users', uid, 'malla', 'state'), {
+        university,
+        career,
+        activeName: normalizedLabel,
+        isCustom: custom,
+        customName: custom ? normalizedLabel : null,
+        selectionUpdatedAt: Date.now(),
+      }, { merge: true }),
+    ]);
+    lastKnownCloudSelection = selectionKey;
   } catch (err) {
-    console.warn('[malla] No se pudo sincronizar ultima_malla_seleccionada', err);
+    console.warn('[malla] No se pudo sincronizar la malla activa', err);
+  }
+}
+
+// ================= Sincronización propia entre dispositivos =================
+// Firestore es la fuente de verdad cuando hay sesión. localStorage queda solo
+// como una caché rápida para el render actual y para compatibilidad con la
+// estructura existente del módulo.
+let ownMallaSyncUid = null;
+let ownMallaSyncPromise = null;
+let unsubscribeOwnCustomMallas = null;
+let unsubscribeOwnMallaState = null;
+let ownMallaRefreshTimer = null;
+
+function teardownOwnMallaCloudSync() {
+  unsubscribeOwnCustomMallas?.();
+  unsubscribeOwnMallaState?.();
+  unsubscribeOwnCustomMallas = null;
+  unsubscribeOwnMallaState = null;
+  ownMallaSyncUid = null;
+  ownMallaSyncPromise = null;
+  lastKnownCloudSelection = null;
+  if (ownMallaRefreshTimer) clearTimeout(ownMallaRefreshTimer);
+  ownMallaRefreshTimer = null;
+}
+
+function allLocalCustomMallas(store) {
+  return Object.values(store || {})
+    .flatMap(value => Array.isArray(value) ? value : [])
+    .filter(malla => malla && typeof malla.nombre === 'string' && malla.nombre.trim());
+}
+
+function groupCustomMallasFromCloud(mallas) {
+  const grouped = {};
+  const fallbackUniversity = state.profileData?.university || '';
+  const fallbackCareer = state.profileData?.career || '';
+
+  for (const raw of mallas) {
+    const malla = JSON.parse(JSON.stringify(raw || {}));
+    const university = malla.universidad || fallbackUniversity;
+    const career = malla.carrera || fallbackCareer;
+    if (!malla.nombre || !university || !career) continue;
+
+    const careerKey = `${normalizeKey(university)}:${normalizeKey(career)}`;
+    if (!Array.isArray(grouped[careerKey])) grouped[careerKey] = [];
+    grouped[careerKey].push(malla);
+  }
+
+  for (const list of Object.values(grouped)) {
+    list.sort((a, b) => String(a.nombre).localeCompare(String(b.nombre), 'es'));
+  }
+
+  return grouped;
+}
+
+function replaceOwnCustomStoreFromCloud(uid, mallas) {
+  const grouped = groupCustomMallasFromCloud(mallas);
+  lsSet(`custom_mallas_${uid}`, grouped);
+
+  const cloudNames = new Set();
+  for (const malla of mallas) {
+    const name = String(malla?.nombre || '').trim();
+    if (!name) continue;
+    cloudNames.add(name);
+
+    if (Array.isArray(malla.approved)) {
+      localStorage.setItem(
+        `mallaCustomAprobados:${uid}:${name}`,
+        JSON.stringify(malla.approved),
+      );
+    }
+  }
+
+  // Elimina estados locales de mallas que ya fueron borradas desde otro equipo.
+  const prefix = `mallaCustomAprobados:${uid}:`;
+  for (let index = localStorage.length - 1; index >= 0; index -= 1) {
+    const key = localStorage.key(index);
+    if (!key?.startsWith(prefix)) continue;
+    const name = key.slice(prefix.length);
+    if (!cloudNames.has(name)) localStorage.removeItem(key);
+  }
+}
+
+function applyOwnMallaStateFromCloud(data) {
+  if (!data || !state.currentUser) return;
+
+  const uid = state.currentUser.uid;
+  const university = data.university || state.profileData?.university || 'GEN';
+  const career = data.career || state.profileData?.career || 'GEN';
+  const approved = Array.isArray(data.approved) ? data.approved : null;
+
+  if (approved) {
+    if (data.isCustom && data.customName) {
+      localStorage.setItem(
+        `mallaCustomAprobados:${uid}:${data.customName}`,
+        JSON.stringify(approved),
+      );
+    } else {
+      localStorage.setItem(
+        `mallaAprobados:${university}:${career}`,
+        JSON.stringify(approved),
+      );
+    }
+  }
+
+  const activeName = data.activeName || (data.isCustom ? data.customName : null);
+  if (activeName) localStorage.setItem('ultima_malla_seleccionada', activeName);
+
+  lastKnownCloudSelection = `${activeName || ''}|${data.isCustom ? '1' : '0'}|${career}|${university}`;
+}
+
+function scheduleOwnMallaRefresh() {
+  if (ownMallaRefreshTimer) clearTimeout(ownMallaRefreshTimer);
+  ownMallaRefreshTimer = setTimeout(async () => {
+    ownMallaRefreshTimer = null;
+    if (location.hash !== '#/malla') return;
+    if (!state.currentUser || isEditing() || isPartnerView()) return;
+
+    await showMallaSelector();
+    restaurarUltimaMalla();
+  }, 30);
+}
+
+async function ensureOwnMallaCloudSync() {
+  const uid = state.currentUser?.uid;
+  if (!uid) {
+    teardownOwnMallaCloudSync();
+    return;
+  }
+
+  if (ownMallaSyncUid === uid && ownMallaSyncPromise) {
+    await ownMallaSyncPromise;
+    return;
+  }
+
+  teardownOwnMallaCloudSync();
+  ownMallaSyncUid = uid;
+
+  ownMallaSyncPromise = (async () => {
+    const customRef = collection(db, 'users', uid, 'customMallas');
+    let customSnapshot = await getDocs(customRef);
+
+    // Migración única: si la nube todavía está vacía, sube las mallas locales
+    // antiguas para no perderlas al activar la sincronización entre equipos.
+    if (customSnapshot.empty) {
+      const localMallas = allLocalCustomMallas(readCustomStore().data);
+      if (localMallas.length) {
+        await Promise.all(localMallas.map(malla =>
+          setDoc(
+            doc(db, 'users', uid, 'customMallas', malla.nombre),
+            JSON.parse(JSON.stringify(malla)),
+            { merge: true },
+          )
+        ));
+        customSnapshot = await getDocs(customRef);
+      }
+    }
+
+    const initialCustomMallas = customSnapshot.docs.map(snapshot => ({
+      ...snapshot.data(),
+      nombre: snapshot.data()?.nombre || snapshot.id,
+    }));
+    replaceOwnCustomStoreFromCloud(uid, initialCustomMallas);
+
+    const mallaStateRef = doc(db, 'users', uid, 'malla', 'state');
+    const [mallaStateSnapshot, userSnapshot] = await Promise.all([
+      getDoc(mallaStateRef),
+      getDoc(doc(db, 'users', uid)),
+    ]);
+
+    if (mallaStateSnapshot.exists()) {
+      applyOwnMallaStateFromCloud(mallaStateSnapshot.data());
+    }
+
+    // Compatibilidad con versiones anteriores, que guardaban la selección
+    // únicamente en users/{uid}.
+    const userData = userSnapshot.exists() ? userSnapshot.data() : null;
+    const alreadySelected = localStorage.getItem('ultima_malla_seleccionada');
+    if (!alreadySelected && userData?.ultima_malla_seleccionada) {
+      localStorage.setItem('ultima_malla_seleccionada', userData.ultima_malla_seleccionada);
+    }
+
+    unsubscribeOwnCustomMallas = onSnapshot(customRef, snapshot => {
+      const mallas = snapshot.docs.map(item => ({
+        ...item.data(),
+        nombre: item.data()?.nombre || item.id,
+      }));
+      replaceOwnCustomStoreFromCloud(uid, mallas);
+      scheduleOwnMallaRefresh();
+    }, error => {
+      console.warn('[malla] No se pudo sincronizar customMallas', error);
+    });
+
+    unsubscribeOwnMallaState = onSnapshot(mallaStateRef, snapshot => {
+      if (snapshot.exists()) applyOwnMallaStateFromCloud(snapshot.data());
+      scheduleOwnMallaRefresh();
+    }, error => {
+      console.warn('[malla] No se pudo sincronizar malla/state', error);
+    });
+  })();
+
+  try {
+    await ownMallaSyncPromise;
+  } catch (error) {
+    console.error('[malla] Falló la sincronización inicial entre dispositivos', error);
+    ownMallaSyncPromise = null;
   }
 }
 
@@ -116,7 +348,7 @@ const UNI_CAREERS = {
 };
 
 // Solo estas carreras tienen CSV oficial cargado
-const VALID_CAREERS = Object.keys(CAREER_NAMES); // ['MEDVET','ICTEL']
+const _VALID_CAREERS = Object.keys(CAREER_NAMES); // ['MEDVET','ICTEL']
 
 
 // Llevar registro de la última universidad/carrera del perfil
@@ -227,6 +459,10 @@ export async function initMallaOnRoute() {
 
   const host = $('malla-host');
   if (!host) return;
+
+  // Antes de renderizar, trae desde Firestore las mallas personalizadas,
+  // el progreso y la selección activa. Así PC y teléfono usan la misma fuente.
+  await ensureOwnMallaCloudSync();
 
   // Asegurar que el shell esté construido una vez
   if (!host.dataset.ready) {
@@ -732,6 +968,7 @@ function renderFromProfile() {
 
 
 async function showMallaSelector() {
+  const uni = state.profileData?.university || '';
   const host = document.querySelector('#page-malla');
   if (!host) return;
 
@@ -739,7 +976,6 @@ async function showMallaSelector() {
   let bar = document.getElementById(containerId);
   if (bar) bar.remove();
 
-  const uni = state.profileData?.university || '';
   const carrera = state.profileData?.career || '';
   if (!uni || !carrera) return;
 
@@ -946,8 +1182,8 @@ document.dispatchEvent(new Event('malla:selector-ready'));
 /* =================== 🔧 NUEVO CONSTRUCTOR VISUAL DE MALLAS PERSONALIZADAS =================== */
 
 async function openCustomMallaBuilder(editName = null) {
-  const uid = state.currentUser?.uid || 'anon';
   const uni = state.profileData?.university || '';
+  const uid = state.currentUser?.uid || 'anon';
   const carrera = state.profileData?.career || '';
   const careerKey = `${normalizeKey(uni)}:${normalizeKey(carrera)}`;
 const { data: localData } = readCustomStore();
@@ -1140,7 +1376,6 @@ ensureStableIds(malla);
 
   const host = document.querySelector('#page-malla .malla-grid');
   const gridHeader = document.querySelector('#page-malla .grid-header');
-  const info = $('malla-info');
   host.innerHTML = '';
   gridHeader.innerHTML = '';
 
@@ -1517,10 +1752,8 @@ async function saveCustomMalla(malla) {
     return;
   }
 
-  const localKey = `custom_mallas_${uid}`;
   const careerKey = `${normalizeKey(uni)}:${normalizeKey(carrera)}`;
 
-  const localData = JSON.parse(localStorage.getItem(localKey) || '{}');
 
 // 🔹 Ensambla ramos "planos" desde estructura (y si viniera vacío, cae a DOM)
 const ramos = [];
@@ -1727,6 +1960,8 @@ function ensureStableIds(malla){
  * y se usan datos desde duoCustomCache si están disponibles.
  */
 function renderCustomMalla(nombre, opts = {}) {
+  const uni = state.profileData?.university || '';
+  const info = $('malla-info');
   const isDuoView = !!opts.isDuo;
 
   const hostRoot = $('malla-host');
@@ -1736,7 +1971,6 @@ function renderCustomMalla(nombre, opts = {}) {
   }
 
   // 1. Obtener datos
-  const uni = state.profileData?.university || '';
   const carrera = state.profileData?.career || '';
   const careerKey = `${normalizeKey(uni)}:${normalizeKey(carrera)}`;
   const { data: localData } = readCustomStore();
@@ -1773,7 +2007,7 @@ function renderCustomMalla(nombre, opts = {}) {
   // Normalizar array de ramos si viene de estructura antigua
   let ramosRender = malla.ramos || [];
   if (!ramosRender.length && Array.isArray(malla.estructura)) {
-    malla.estructura.forEach((semObj, sIdx) => {
+    malla.estructura.forEach((semObj, _sIdx) => {
       (semObj.ramos || []).forEach((r, rIdx) => {
         if ((r.nombre||'').trim() || (r.codigo||'').trim()) {
           ramosRender.push({
@@ -1788,7 +2022,6 @@ function renderCustomMalla(nombre, opts = {}) {
 
   const host = document.querySelector('#page-malla .malla-grid');
   const gridHeader = document.querySelector('#page-malla .grid-header');
-  const info = $('malla-info');
   
   if (!host) return;
 
@@ -2140,12 +2373,9 @@ loadState(section, careerCode);
 actualizarDependencias(section, careerCode);
 updatePercentage(section);
 
-// ❗No guardes estado cuando estás viendo la malla de tu duo
-// Nunca sobrescribir el estado del usuario si estás viendo la malla del dúo
-if (!isPartnerView() && section.dataset.custom !== 'true') {
-   saveState(section);
-}
-
+// Renderizar nunca debe escribir en Firestore. El estado se guarda solo
+// cuando el usuario marca o desmarca un ramo; así evitamos ciclos de
+// onSnapshot → render → escritura y lecturas/escrituras innecesarias.
 logMalla('renderMalla()', careerCode);
 }
 
@@ -2279,7 +2509,7 @@ function actualizarDependencias(host) {
 
     // Prerrequisitos
     let prereqs = [];
-    try { prereqs = JSON.parse(el.dataset.prereqs || '[]'); } catch (e) {}
+    try { prereqs = JSON.parse(el.dataset.prereqs || '[]'); } catch {}
 
     const okPrereqs = prereqs.every(req => {
       const reqClean = String(req).trim();
@@ -2334,7 +2564,15 @@ async function saveState(host){
   if (state.currentUser){
     try {
       const ref = doc(db,'users',state.currentUser.uid,'malla','state');
-      await setDoc(ref, { career, approved: aprob, updatedAt: Date.now() }, { merge:true });
+      await setDoc(ref, {
+        university: uni,
+        career,
+        activeName: localStorage.getItem('ultima_malla_seleccionada') || null,
+        isCustom: false,
+        customName: null,
+        approved: aprob,
+        updatedAt: Date.now(),
+      }, { merge:true });
       try { document.dispatchEvent(new Event('malla:updated')); } catch(_) {}
     } catch (err){
       console.error('saveState → Firestore setDoc falló:', err, { approved: aprob });
@@ -2386,15 +2624,26 @@ function saveStateCustom(host, mallaNombre){
       const career = state.profileData?.career || 'GEN';
 
       const ref = doc(db, 'users', state.currentUser.uid, 'malla', 'state');
-      // Ojo: reutilizamos el mismo doc que la malla oficial,
-      // pero marcamos que es custom y guardamos el nombre.
-      setDoc(ref, {
-        career,
-        isCustom: true,
-        customName: mallaNombre,
-        approved: aprob,
-        updatedAt: Date.now(),
-      }, { merge: true }).catch(err => {
+      const customRef = doc(db, 'users', state.currentUser.uid, 'customMallas', mallaNombre);
+
+      // Guarda el estado activo y también el progreso dentro de la malla
+      // personalizada, para que todas las mallas mantengan su propio avance
+      // al abrir la cuenta desde otro dispositivo.
+      Promise.all([
+        setDoc(ref, {
+          university: uni,
+          career,
+          activeName: mallaNombre,
+          isCustom: true,
+          customName: mallaNombre,
+          approved: aprob,
+          updatedAt: Date.now(),
+        }, { merge: true }),
+        setDoc(customRef, {
+          approved: aprob,
+          progressUpdatedAt: Date.now(),
+        }, { merge: true }),
+      ]).catch(err => {
         console.error('[malla] saveStateCustom → Firestore setDoc falló:', err);
       });
     } catch (e) {
@@ -2614,7 +2863,6 @@ function setupPartnerToggle(){
 
   const btnParty = $('btnPartyMalla');
   const btnBack  = $('btnVolverMiMalla');
-  const hint     = $('partyMallaHint');
 
   const refreshUI = () => {
   const otherUid = __partyLockUid || __partyViewingUid || state.pairOtherUid;
@@ -2651,7 +2899,6 @@ function setupPartnerToggle(){
   setPartnerReadonly(false);
   lastRenderedKey = '';
 
-  const uni = state.profileData?.university || '';
   const carrera = state.profileData?.career || '';
   const ultima = localStorage.getItem('ultima_malla_seleccionada');
 
@@ -2686,6 +2933,7 @@ async function watchPartnerMalla() {
 
   const host = document.getElementById('malla-wrapper');
   if (!host) return;
+  const info = $('malla-info');
 
   const otherUid = __partyLockUid || __partyViewingUid || state.pairOtherUid;
 
@@ -2693,7 +2941,6 @@ async function watchPartnerMalla() {
 
 if (!canSee) {
   const grid = document.querySelector('#page-malla .malla-grid');
-  const info = $('malla-info');
 
   if (grid) grid.innerHTML = privacyBlockedMessage('su malla');
   if (info) info.style.display = 'none';
@@ -2921,6 +3168,11 @@ export function getPrereqs(course) {
 
 // Espera a que Firebase confirme sesión y Semestre se restaure
 document.addEventListener('auth:ready', () => {
+  if (!state.currentUser) {
+    teardownOwnMallaCloudSync();
+    return;
+  }
+
   setTimeout(() => {
     console.log('[malla] auth:ready → initMallaOnRoute()');
     initMallaOnRoute();
@@ -3000,11 +3252,11 @@ function renumerarMalla(host) {
 }
 
 function restaurarUltimaMalla() {
+  const uni = state.profileData?.university || '';
   if (isEditing()) return;
   if (isPartnerView()) return;
   if (location.hash !== '#/malla') return;
 
-  const uni = state.profileData?.university || '';
   const carrera = state.profileData?.career || '';
 
   // ✅ Si perfil incompleto, NO restaurar ni renderizar nada

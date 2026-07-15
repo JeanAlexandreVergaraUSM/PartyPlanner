@@ -1,7 +1,7 @@
   // js/progreso.js
 import { db } from './firebase.js';
 import { $, state } from './state.js';
-import { doc, onSnapshot, collection, getDocs, query, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot, getDoc } from 'firebase/firestore';
 
 
 
@@ -20,9 +20,9 @@ function parseCSV(text){
   if (!lines.length) return [];
   const head = lines[0];
   const sep = (head.split(';').length >= head.split(',').length) ? ';' : ',';
-  const headers = head.split(sep).map(h=>h.trim().replace(/^['\"]|['\"]$/g,''));
+  const headers = head.split(sep).map(h=>h.trim().replace(/^['"]|['"]$/g,''));
   return lines.slice(1).map(line=>{
-    const cols = line.split(sep).map(c=>c.trim().replace(/^['\"]|['\"]$/g,''));
+    const cols = line.split(sep).map(c=>c.trim().replace(/^['"]|['"]$/g,''));
     const o={}; headers.forEach((h,i)=> o[h]=cols[i] ?? ''); return o;
   });
 }

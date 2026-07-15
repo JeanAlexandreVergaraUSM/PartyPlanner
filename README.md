@@ -1,19 +1,19 @@
-# 🎓 DuoPlanner
+# 🎓 PartyPlanner
 
-**DuoPlanner** es una aplicación web académica diseñada para estudiantes universitarios que quieren **organizar su vida académica de forma inteligente, visual y colaborativa**.  
+**PartyPlanner** es una aplicación web académica diseñada para estudiantes universitarios que quieren **organizar su vida académica de forma inteligente, visual y colaborativa**.  
 Permite gestionar semestres, ramos, notas, asistencia, horarios, progreso y trabajar en conjunto con un compañero (“Duo”) para comparar avances y rendimiento.
 
 ---
 
 ## 🌐 Demo en línea
 
-👉 [Abrir DuoPlanner](https://jeanalexandrevergarausm.github.io/PartyPlanner)
+👉 [Abrir PartyPlanner](https://jeanalexandrevergarausm.github.io/PartyPlanner)
 
 ---
 
 ## 🧠 Descripción general
 
-DuoPlanner combina herramientas de planificación académica, análisis de progreso, colaboración entre pares e integración con servicios externos (Firebase, Google Calendar y un bot con IA).  
+PartyPlanner combina herramientas de planificación académica, análisis de progreso, colaboración entre pares e integración con servicios externos (Firebase, Google Calendar y un bot con IA).  
 
 El objetivo principal es **centralizar toda la información universitaria del estudiante** en una sola plataforma:
 
@@ -46,6 +46,7 @@ El objetivo principal es **centralizar toda la información universitaria del es
 - Opción de **eliminar o cambiar el avatar**.
 - Sincronización del perfil con **Firebase**.
 - Configuración visual (color favorito) que se refleja en distintas vistas.
+- Selector persistente de **modo oscuro o claro**.
 - El bot puede responder, entre otras:
   - “¿Cuál es mi universidad?”
   - “¿Cuántos años tengo?”
@@ -115,6 +116,7 @@ El objetivo principal es **centralizar toda la información universitaria del es
 - Estado del ramo:
   - Promedio actual.
   - Condición de aprobado/reprobado.
+- Reglas de aprobación personalizadas, con guardado automático y confirmación visual.
 - Capacidad de comparar resultados con el **Duo**.
 
 ---
@@ -131,6 +133,7 @@ El objetivo principal es **centralizar toda la información universitaria del es
     - Asignar ramo y usar su color.
     - Configurar **repetición** (día, mes, año).
     - Marcar el evento como **persistente** para semestres futuros.
+    - Convertirlo en **tarea** y marcarla como completada o pendiente desde el calendario.
 - Edición/eliminación:
   - Clic en un evento para editarlo.
   - Botón “✕” en cada evento para eliminarlo.
@@ -186,6 +189,7 @@ El objetivo principal es **centralizar toda la información universitaria del es
   - Bloques por día y hora.
   - Diferenciación por color de ramo.
 - Posibilidad de ver el **horario del Duo**.
+- Simulador de paralelos con distribución automática de choques: izquierda/derecha y cuatro cuadrantes cuando se combinan mitades superior/inferior.
 - Exportación del horario a **imagen o PDF**.
 
 ---
@@ -226,7 +230,7 @@ El objetivo principal es **centralizar toda la información universitaria del es
 
 ## 🤖 Asistente inteligente (resumen)
 
-El bot se integra con los datos de DuoPlanner y permite:
+El asistente se integra con la arquitectura de datos de PartyPlanner y permite:
 
 - **Consultar información** de Perfil, Semestres, Ramos, Notas, Duo, etc.
 - **Ejecutar acciones**:
@@ -239,15 +243,21 @@ Los comandos de ejemplo listados más arriba (Semestres, Duo, Acciones) forman p
 
 ---
 
+## 🔐 Datos y conectividad
+
+PartyPlanner funciona siempre en línea. Los documentos privados de Firestore se mantienen únicamente en memoria mientras la pestaña está abierta; no se ofrece almacenamiento offline persistente. La caché normal de los archivos estáticos de la web permanece disponible para acelerar la carga.
+
+---
+
 ## ⚙️ Tecnologías utilizadas
 
 | Área | Tecnologías |
 |------|-------------|
 | **Frontend** | HTML5, CSS3 (gradientes, variables, animaciones), JavaScript ES6, Vite |
 | **Estado / Router** | Módulos JS propios (state.js, router.js, etc.) |
-| **Backend / API** | Node.js (Vercel), Firebase Admin SDK |
+| **Backend / API** | Node.js/Vercel en repositorio privado; integración IA reservada para una fase futura |
 | **Autenticación & Base de datos** | Firebase Authentication, Firestore |
-| **IA / NLU** | OpenAI API (GPT-4o-mini, vía backend) |
+| **IA / NLU** | Arquitectura y backend privado conservados; integración desactivada hasta una fase futura |
 | **Integraciones externas** | Google Calendar API (lectura, OAuth con Google Identity Services) |
 | **Exportaciones** | html2canvas, jsPDF |
 | **Control de versiones** | Git & GitHub |
@@ -271,7 +281,7 @@ Prioridad aproximada:
 - `★★` **Mejorar la experiencia en otros dispositivos**  
   - Ajustes de diseño para tablets y móviles (breakpoints, tamaños de fuente, grid responsive).
 
-- `★★★` **Convertir DuoPlanner en una aplicación móvil**  
+- `★★★` **Convertir PartyPlanner en una aplicación móvil**  
   - App (PWA o nativa) con **notificaciones push** para:
     - Clases.
     - Evaluaciones.

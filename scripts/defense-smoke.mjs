@@ -50,8 +50,11 @@ if (/\son(?:click|change|input|submit|load|error|keydown|paste)\s*=/i.test(index
 if (!/initializeAppCheck/.test(firebaseJs) || !/ReCaptchaEnterpriseProvider/.test(firebaseJs)) {
   fail('Firebase App Check con reCAPTCHA Enterprise no está preparado.');
 }
-if (!/memoryLocalCache/.test(firebaseJs) || !/persistentLocalCache/.test(firebaseJs)) {
-  fail('Debe existir política de caché memory/persistent por dispositivo confiable.');
+if (!/memoryLocalCache/.test(firebaseJs)) {
+  fail('Firestore debe usar caché temporal en memoria.');
+}
+if (/persistentLocalCache|persistentMultipleTabManager/.test(firebaseJs)) {
+  fail('PartyPlanner no debe habilitar persistencia offline de Firestore.');
 }
 
 for (const key of [

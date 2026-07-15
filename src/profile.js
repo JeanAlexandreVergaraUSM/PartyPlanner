@@ -1,5 +1,5 @@
 // js/profile.js
-import { db, persistentCacheEnabled, updateTrustedDevicePreference, clearLocalFirestoreCache } from './firebase.js';
+import { db } from './firebase.js';
 import { doc, onSnapshot, updateDoc,setDoc } from 'firebase/firestore';
 import { $, state, updateDebug } from './state.js';
 import { safeImageDataUrl, setLabeledText } from './security/html.js';
@@ -650,7 +650,7 @@ if (!btnDelete.dataset.bound) {
   }
 }
 
-function calcAge(iso){
+function _calcAge(iso){
   if (!iso) return null;
   const b = new Date(iso); if (isNaN(b)) return null;
   const t = new Date();
@@ -717,7 +717,7 @@ if (!carRaw) {
   const phoneOk = !rawPhone || /^[+()\s0-9-]{6,}$/.test(rawPhone);
   if (!phoneOk) { alert('Teléfono no es válido.'); return; }
 
-  const careerVal = (careerSel && CAREERS_BY_UNI[uni]?.some(x => x.value === careerSel.value))
+  const _careerVal = (careerSel && CAREERS_BY_UNI[uni]?.some(x => x.value === careerSel.value))
     ? careerSel.value
     : null;
 
@@ -814,7 +814,7 @@ function readableCareer(d){
 
 
 function isValidHex(s){ return typeof s === 'string' && /^#[0-9A-Fa-f]{6}$/.test(s); }
-function formatDateDMY(iso){
+function _formatDateDMY(iso){
   if (!iso) return '—';
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
   if (!m) return iso;
@@ -1087,65 +1087,9 @@ function bindProfileCustomSelectors(){
 }
 
 
-function bindDeviceSecurityPreferences(){
-  const trustedChk = $('pfTrustedDevice');
-  const status = $('pfTrustedDeviceStatus');
-  const clearBtn = $('pfClearLocalCache');
-
-  if (!trustedChk || trustedChk.dataset.bound === '1') return;
-
-  const renderStatus = () => {
-    trustedChk.checked = !!persistentCacheEnabled;
-    if (status) {
-      status.textContent = persistentCacheEnabled
-        ? 'Modo confiable activo: Firestore usa caché persistente en este navegador.'
-        : 'Modo privado activo: Firestore usa caché en memoria y no conserva datos offline entre sesiones.';
-    }
-  };
-
-  trustedChk.addEventListener('change', () => {
-    const next = !!trustedChk.checked;
-    updateTrustedDevicePreference(next);
-
-    const msg = next
-      ? 'La caché persistente se activará al recargar PartyPlanner.'
-      : 'La caché persistente se desactivará al recargar. Puedes usar “Borrar caché local” para eliminar también los datos ya almacenados.';
-
-    if (status) status.textContent = msg;
-
-    setTimeout(() => {
-      location.reload();
-    }, 700);
-  });
-
-  clearBtn?.addEventListener('click', async () => {
-    const ok = confirm('¿Borrar la caché local de Firestore de este navegador? Los datos confirmados en la nube no se eliminan.');
-    if (!ok) return;
-
-    clearBtn.disabled = true;
-    if (status) status.textContent = 'Borrando caché local…';
-
-    try {
-      updateTrustedDevicePreference(false);
-      await clearLocalFirestoreCache();
-    } catch (err) {
-      console.error('clearLocalFirestoreCache', err);
-      clearBtn.disabled = false;
-      if (status) status.textContent = 'No se pudo borrar la caché local. Cierra otras pestañas de PartyPlanner e inténtalo nuevamente.';
-    }
-  });
-
-  trustedChk.dataset.bound = '1';
-  renderStatus();
-}
-
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    bindProfileCustomSelectors();
-    bindDeviceSecurityPreferences();
-  }, { once:true });
+  document.addEventListener('DOMContentLoaded', bindProfileCustomSelectors, { once:true });
 } else {
   bindProfileCustomSelectors();
-  bindDeviceSecurityPreferences();
 }
 

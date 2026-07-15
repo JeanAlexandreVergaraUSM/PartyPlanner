@@ -1,12 +1,16 @@
 // js/main.js
 import './styles.css';
-import './firebase.js';
+import { firestoreReady } from './firebase.js';
+import { initTheme } from './theme.js';
 import { initAuth } from './auth.js';
 import { initRouter } from './router.js';
 import { initPair } from './pair.js';
 import { initSemesters } from './semesters.js';
 
 window.addEventListener('DOMContentLoaded', async () => {
+  initTheme();
+  await firestoreReady;
+
   // 🚀 Inicializa todo en paralelo para que nada bloquee
   await Promise.all([
     initAuth(),

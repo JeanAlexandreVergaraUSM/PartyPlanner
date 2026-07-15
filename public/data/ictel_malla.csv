@@ -45,7 +45,7 @@ HCW-102;HCW-102;Inglés 3;VI;3;35;23;;;Inglés
 ELO-321;ELO-321;Teoría de Sistemas Operativos;VII;5;36;10;;;Software
 ELO-211;ELO-211;Sistemas Digitales;VII;5;37;20;;;Electrónica
 ELO-212;ELO-212;Laboratorio de Sistemas Digitales;VII;5;38;20;;;Electrónica
-MAT-270;MAT-270;Análisis Numérico;VII;5;39;33;;;Ciencias Básicas
+MAT-270;MAT-270;Análisis Numérico;VII;7;39;33;;;Ciencias Básicas
 TEL-360;TEL-360;Pensamiento de Diseño en Ingeniería;VII;5;40;26;;;Formación General
 HCW-200;HCW-200;Inglés 4;VII;3;41;35;;;Inglés
 
@@ -70,14 +70,14 @@ IWN-170;IWN-170;Economía IA;X;5;57;13;;;Industrias
 TEL-011;TEL-011;Complementario 1;X;5;58;;;;Complementarios
 HCW-202;HCW-202;Inglés 6;X;3;59;47;;;Inglés
 
-ILN-250;ILN-250;Gestión de Investig. de Operaciones;XI;5;60;22;;;Industrias
-IWG-397;IWG-397;Mem. Multid.: Innovación;XI;5;61;;;;Complementarios
-IWG-396;IWG-396;Mem. Multid.: Transversal 1;XI;5;62;;;;Complementarios
-IWG-394;IWG-394;Taller Memoria Multidisciplinaria 1;XI;8;63;;;;Complementarios
+ILN-250;ILN-250;Gestión de Investig. de Operaciones;XI;6;60;22;;;Industrias
+IWG-397;IWG-397;Mem. Multid.: Innovación;XI;6;61;;;;Complementarios
+IWG-396;IWG-396;Mem. Multid.: Transversal 1;XI;6;62;;;;Complementarios
+IWG-394;IWG-394;Taller Memoria Multidisciplinaria 1;XI;9;63;;;;Complementarios
 TEL-012;TEL-012;Complementario 2;XI;5;64;;;;Complementarios
 
 ICS-111;ICS-111;Administración de Empresas;XII;5;65;;;;Industrias
-IWG-399;IWG-399;Mem. Multid.: Emprendimiento;XII;5;66;;;;Complementarios
-IWG-398;IWG-398;Mem. Multid.: Transversal 2;XII;5;67;;;;Complementarios
-IWG-395;IWG-395;Taller Memoria Multidisciplinaria 2;XII;8;68;63;;;Complementarios
+IWG-399;IWG-399;Mem. Multid.: Emprendimiento;XII;6;66;;;;Complementarios
+IWG-398;IWG-398;Mem. Multid.: Transversal 2;XII;6;67;;;;Complementarios
+IWG-395;IWG-395;Taller Memoria Multidisciplinaria 2;XII;12;68;63;;;Complementarios
 TEL-013;TEL-013;Complementario 3;XII;5;69;;;;Complementarios

@@ -3,8 +3,9 @@
   import { $, state } from './state.js';
   import { canViewPartyZone, privacyBlockedMessage } from './privacy.js';
   import { bindExportButtons } from './export.js';
-  import { collection, addDoc, onSnapshot, doc, deleteDoc, query, orderBy, getDocs, getDoc, updateDoc, where , setDoc} from 'firebase/firestore';
-  let IN_SIM_MODAL = false;  let SIM_ALLOW_PERSIST = false;let SIM_SAVED_FULL = '';let SIM_SAVED_SNAPSHOT = '';let SIM_DIRTY = false;let SIM_TERM = '';let unsubMyCourses = null;let SIM_OPEN_SNAPSHOT = null;const partyScheduleCache = new Map(); const SIM_PARALLEL_DEFS = new Map();let SIM_COURSES = [];let SIM_ITEMS = [];const SELECTED_PARALLEL = new Map();let EDIT_BLOCKS_MODE = false; let SIM_SLOTS = null;let ALLOW_ADD_COURSE_UI = false; let myColor = '#22c55e';let partnerColor = '#ff69b4';let unsubPartnerProfile = null;let schedBooted = false;let unsubPartySched = null;let unsubPartyCourses = null;let unsubPartyProfile = null;let partyItems = [];let partyCourses = [];let partySlots = null;let partyUni = 'USM';let partyMemberProfileCache = {};const busyMembers = new Map(); const busyUnsubs  = new Map(); let busyRenderRAF = null;
+  import { packScheduleLanes, resolveHorizontalPlacement } from './scheduleLayout.js';
+  import { collection, addDoc, onSnapshot, doc, deleteDoc, query, orderBy, getDocs, getDoc, updateDoc, setDoc} from 'firebase/firestore';
+  let IN_SIM_MODAL = false; let _SIM_SAVED_FULL = ''; let _SIM_SAVED_SNAPSHOT = ''; let _SIM_DIRTY = false;let SIM_TERM = '';let unsubMyCourses = null;let SIM_OPEN_SNAPSHOT = null;const partyScheduleCache = new Map(); const SIM_PARALLEL_DEFS = new Map();let SIM_COURSES = [];let SIM_ITEMS = [];const SELECTED_PARALLEL = new Map();let EDIT_BLOCKS_MODE = false; let SIM_SLOTS = null;let ALLOW_ADD_COURSE_UI = false; let myColor = '#22c55e';let partnerColor = '#ff69b4';let unsubPartnerProfile = null;let schedBooted = false;let unsubPartySched = null;let unsubPartyCourses = null;let unsubPartyProfile = null;let partyItems = [];let partyCourses = [];let partySlots = null;let partyUni = 'USM';let partyMemberProfileCache = {};const busyMembers = new Map(); const busyUnsubs  = new Map(); let busyRenderRAF = null;
   function takeSimSnapshot(){
     const defsObj = {};
     for (const [cid, defs] of (SIM_PARALLEL_DEFS || new Map()).entries()){
@@ -270,7 +271,7 @@
       const col = isValidHex(c.color) ? c.color : '#3B82F6';
       const defs = SIM_PARALLEL_DEFS.get(c.id) || [];
       const selectedPid = SELECTED_PARALLEL.get(c.id) || defs[0]?.pid || null;
-      const selectedDef = selectedPid ? defs.find(d => d.pid === selectedPid) : null;
+      const _selectedDef = selectedPid ? defs.find(d => d.pid === selectedPid) : null;
       const labelText = c.name;
       const rect = document.createElement('div');
       rect.className = 'palette-rect';
@@ -1235,45 +1236,6 @@
     window.addEventListener('scroll', onScroll, true);
     window.addEventListener('resize', onResize);
   }
-  function vRangeFromPos(pos){
-    const p = pos || 'full';
-    if (p === 'top') return { a: 0.00, b: 0.3334 };
-    if (p === 'bottom') return { a: 0.6666, b: 1.00 };
-    return { a: 0.00, b: 1.00 }; 
-  }
-
-  function overlapsV(r1, r2){
-    return r1.a < r2.b && r2.a < r1.b;
-  }
-  function packLanesByVertical(blocks){
-    const arr = blocks.map(b => ({ ...b, _vr: vRangeFromPos(b.pos) }));
-    const orderPos = { top:0, full:1, bottom:2 };
-    arr.sort((x,y)=>{
-      const ax = orderPos[x.pos||'full'] ?? 1;
-      const ay = orderPos[y.pos||'full'] ?? 1;
-      if (ax !== ay) return ax - ay;
-      return String(x.id||'').localeCompare(String(y.id||''));
-    });
-    const lanes = []; 
-    for (const b of arr){
-      let placed = false;
-      for (let li=0; li<lanes.length; li++){
-        const laneBlocks = lanes[li];
-        const collide = laneBlocks.some(o => overlapsV(b._vr, o._vr));
-        if (!collide){
-          b._lane = li;
-          laneBlocks.push(b);
-          placed = true;
-          break;
-        }
-      }
-      if (!placed){
-        b._lane = lanes.length;
-        lanes.push([b]);
-      }
-    }
-    return { blocks: arr, laneCount: Math.max(1, lanes.length) };
-  }
   export function initSchedule(){
     if (schedBooted) return; 
     schedBooted = true;
@@ -1941,7 +1903,7 @@
     SIM_COURSES.push({ id: localId, ...data });
     saveSimCourses(SIM_COURSES);     // ✅ persistir el pool del simulador
   markSimDirty();  
-    SIM_DIRTY = true;
+    _SIM_DIRTY = true;
     renderSimPalette();
     await renderSimGrid();
 
@@ -2042,7 +2004,7 @@
     document.body.appendChild(wrap);
   }
 
-  function askSaveSimExit(){
+  function _askSaveSimExit(){
     ensureSimExitModal();
     const modal = document.getElementById('simExitModal');
     const bSave = document.getElementById('simExitSave');
@@ -2381,7 +2343,7 @@
       }
     });
   }
-  function ensureRoomModal(){
+  function _ensureRoomModal(){
     if (document.getElementById('roomModal')) return;
 
     const wrap = document.createElement('div');
@@ -2575,7 +2537,6 @@
     `;
 
     document.body.appendChild(wrap);
-    const modal = wrap;
     const hasLunch = document.getElementById('csHasLunch');
     const lunchRow = document.getElementById('csLunchRow');
 
@@ -2688,17 +2649,17 @@
     } catch { return ''; }
   }
   function markSimDirty(){
-    SIM_DIRTY = isSimDirty(); 
+    _SIM_DIRTY = isSimDirty(); 
   }
 
   function syncSimSaved(){
-    SIM_SAVED_FULL = takeSimSnapshot();
-    SIM_DIRTY = false;
+    _SIM_SAVED_FULL = takeSimSnapshot();
+    _SIM_DIRTY = false;
   }
   function saveSimItems(){
     try{ localStorage.setItem(getSimStorageKey(), JSON.stringify(SIM_ITEMS || [])); } catch {}
-    SIM_SAVED_SNAPSHOT = simSnapshot(SIM_ITEMS);
-    SIM_DIRTY = false;
+    _SIM_SAVED_SNAPSHOT = simSnapshot(SIM_ITEMS);
+    _SIM_DIRTY = false;
   }
   function loadSimItems(){
     try{
@@ -2783,8 +2744,8 @@
       for (const cid of Object.keys(s.selected || {})){
         if (s.selected[cid]) SELECTED_PARALLEL.set(cid, s.selected[cid]);
       }
-      SIM_SAVED_SNAPSHOT = simSnapshot(SIM_ITEMS);
-      SIM_DIRTY = false;
+      _SIM_SAVED_SNAPSHOT = simSnapshot(SIM_ITEMS);
+      _SIM_DIRTY = false;
       if (persist){
         saveSimSlots(SIM_SLOTS);
         markSimDirty();
@@ -2797,7 +2758,7 @@
       console.warn('restoreSimFromSnapshot failed', e);
     }
   }
-  async function persistSimAll(){
+  async function _persistSimAll(){
     SIM_OPEN_SNAPSHOT = takeSimSnapshot();
     syncSimSaved();
   }
@@ -2894,7 +2855,7 @@
 
     const data = await openCustomScheduleModal({ editMode });
     if (!data) return; // cancelado
-    const { n, hasLunch, lunchStart, lunchEnd, start1, end1, start2, end2 } = data;
+    const { n, hasLunch, lunchStart, lunchEnd, start1, end1, start2 } = data;
     let lunchS = null, lunchE = null;
     if (hasLunch) {
       lunchS = toMinutes(lunchStart);
@@ -2984,7 +2945,7 @@
       subOverride: 'Cambia los parámetros y regeneraremos los bloques. Después puedes ajustar cada bloque con click.'
     });
     if (!data) return null;
-    const { n, hasLunch, lunchStart, lunchEnd, start1, end1, start2, end2 } = data;
+    const { n, hasLunch, lunchStart, lunchEnd, start1, end1, start2 } = data;
     let lunchS = null, lunchE = null;
     if (hasLunch) {
       lunchS = toMinutes(lunchStart);
@@ -3175,7 +3136,7 @@ return `
     return renderCellContentFromArray(here, false);
   }
   function renderCellContentFromArray(here, isSim){
-    const packed = packLanesByVertical(here);
+    const packed = packScheduleLanes(here);
     return packed.blocks.map(b => {
       return blockHtmlPacked(b, packed.laneCount, isSim);
     }).join('');
@@ -3199,18 +3160,10 @@ return `
   const color = getCourseColorById(courseArr, it.courseId, myColor);
   const text  = bestText(color);
 
-  const h = it.hpos || 'single';
-
-  let left = 0;
-  let width = 100;
-
-  if (h === 'left') {
-    left = 0;
-    width = 50;
-  } else if (h === 'right') {
-    left = 50;
-    width = 50;
-  }
+  const horizontal = resolveHorizontalPlacement(it, laneCount);
+  const h = horizontal.effectiveHpos;
+  const left = horizontal.left;
+  const width = horizontal.width;
 
   const v = it.pos || 'full';
 
@@ -3237,17 +3190,24 @@ return `
        data-sim-hpos="${escapeHtml(it.hpos || 'single')}"`
     : `data-id="${escapeHtml(it.id || '')}" draggable="true"`;
 
+  const horizontalClass = horizontal.automatic
+    ? 'h-auto-packed'
+    : `h-${h}`;
+
   return `
-    <div class="placed pos-${it.pos || 'full'} h-${h}"
+    <div class="placed ${horizontalClass}"
         ${dragAttrs}
         title="${escapeHtml(title)}"
         style="
           background:${color};
           border:1px solid rgba(0,0,0,0.25);
-          left:${left}%;
-          width:${width}%;
-          top:${top}%;
-          height:${height}%;
+          left:calc(${left}% + 2px);
+          right:auto;
+          width:calc(${width}% - 4px);
+          top:calc(${top}% + 2px);
+          bottom:auto;
+          height:calc(${height}% - 4px);
+          box-sizing:border-box;
         ">
         <div class="placed-title" style="color:${text}; font-weight:700; line-height:1.05;">
           ${escapeHtml(shown)}
@@ -3335,7 +3295,6 @@ return `
   function bindCellDropZones() {
     document.querySelectorAll('.cell.slot').forEach(cell => {
       if (cell.classList.contains('is-lunch')) return;
-      const isSimCell = !!IN_SIM_MODAL;
       cell.addEventListener('dragover', ev => {
         ev.preventDefault();
         ev.dataTransfer.dropEffect =
@@ -3776,7 +3735,7 @@ return `
   let unsubShared = null;
   let sharedItems = [];
   let unsubSharedCourses = null;
-  let sharedCourses = [];
+  let _sharedCourses = [];
   let sharedSlots = null;
   let sharedUni = 'USM';
 
@@ -3921,11 +3880,11 @@ return `
   }
 
 
-  async function subscribeShared(semId){
+  async function _subscribeShared(semId){
     if (unsubShared){ unsubShared(); unsubShared=null; }
     if (unsubSharedCourses){ unsubSharedCourses(); unsubSharedCourses=null; }
     if (unsubPartnerProfile){ unsubPartnerProfile(); unsubPartnerProfile=null; }
-    sharedItems = []; sharedCourses = [];
+    sharedItems = []; _sharedCourses = [];
     sharedSlots = USM_SLOTS; sharedUni = 'USM';
     buildSharedGrid();
 
@@ -3938,7 +3897,7 @@ return `
 
 if (!canSee) {
   sharedItems = [];
-  sharedCourses = [];
+  _sharedCourses = [];
 
   const host = $('schedSharedUSM') || $('schedPartyUSM');
   if (host) host.innerHTML = privacyBlockedMessage('su horario');
@@ -3965,7 +3924,7 @@ if (!canSee) {
 
     const coursesRef = collection(db,'users',otherUid,'semesters',semId,'courses');
     unsubSharedCourses = onSnapshot(query(coursesRef, orderBy('name')), (snap)=>{
-      sharedCourses = snap.docs.map(d=> ({ id:d.id, ...d.data() }));
+      _sharedCourses = snap.docs.map(d=> ({ id:d.id, ...d.data() }));
       buildSharedGrid();
     });
 
@@ -3978,7 +3937,7 @@ if (!canSee) {
 
   let _lastPopulateToken = 0;
 
-  async function populateSharedSemesters(){
+  async function _populateSharedSemesters(){
     const sel = $('sh-semSel');
     if (!sel) return;
 
@@ -3990,7 +3949,7 @@ if (!canSee) {
 
     const canon = s => {
       const t = norm(s);
-      const m = t.replace(/[^\d\-\/ ]+/g,'').match(/(\d{4})\D*([12])$/);
+      const m = t.replace(/[^\d/ -]+/g,'').match(/(\d{4})\D*([12])$/);
       return m ? `${m[1]}-${m[2]}` : t.toLowerCase();
     };
     const parseYT = label => {
@@ -4508,7 +4467,7 @@ if (!canSee) {
     });
   }
   async function unsubscribeBusyAll(){
-    for (const [uid, u] of busyUnsubs.entries()){
+    for (const [, u] of busyUnsubs.entries()){
       try { u.prof?.(); } catch {}
       try { u.courses?.(); } catch {}
       try { u.sched?.(); } catch {}
@@ -5020,8 +4979,8 @@ if (!canSee) {
       SIM_PARALLEL_DEFS.clear?.();
       SELECTED_PARALLEL.clear?.();
       SIM_OPEN_SNAPSHOT = null;
-      SIM_SAVED_FULL = '';
-      SIM_DIRTY = false;
+      _SIM_SAVED_FULL = '';
+      _SIM_DIRTY = false;
       closeDirect();
       await renderGrid();
       alert('✅ Simulación exportada. Tu horario oficial fue actualizado y el simulador se reinició.');
@@ -5052,8 +5011,8 @@ if (!canSee) {
     SIM_PARALLEL_DEFS.clear?.();
     SELECTED_PARALLEL.clear?.();
     SIM_OPEN_SNAPSHOT = null;
-    SIM_SAVED_FULL = '';
-    SIM_DIRTY = false;
+    _SIM_SAVED_FULL = '';
+    _SIM_DIRTY = false;
     closeDirect();
   });
     const attemptClose = async () => {
@@ -5085,7 +5044,7 @@ if (!canSee) {
 
     if (action === 'discard') {
     restoreSimFromSnapshot(SIM_OPEN_SNAPSHOT, { persist:true });
-    SIM_DIRTY = false;
+    _SIM_DIRTY = false;
     renderPalette();
     renderGrid();
     closeDirect();
@@ -5115,7 +5074,7 @@ if (!canSee) {
     if (!here.length) return '';
     return renderCellContentFromArray(here, /*isSim*/ true);
   }
-  async function rebuildSimItemsFromSelections(){
+  async function _rebuildSimItemsFromSelections(){
     const SLOTS = SIM_SLOTS || await getMySlots();
     if (!SLOTS) return;
 
@@ -5303,8 +5262,8 @@ if (!canSee) {
     });
 
     SIM_OPEN_SNAPSHOT = takeSimSnapshot();
-    SIM_SAVED_FULL = SIM_OPEN_SNAPSHOT;
-    SIM_DIRTY = false;
+    _SIM_SAVED_FULL = SIM_OPEN_SNAPSHOT;
+    _SIM_DIRTY = false;
   }
   async function commitSimToRealSchedule(){
     if (!state.currentUser || !state.activeSemesterId){
@@ -5479,8 +5438,8 @@ if (!canSee) {
     saveSimParallelDefs();
     saveSimSelectedParallels();
     SIM_OPEN_SNAPSHOT = takeSimSnapshot();
-    SIM_SAVED_FULL = SIM_OPEN_SNAPSHOT;
-    SIM_DIRTY = false;
+    _SIM_SAVED_FULL = SIM_OPEN_SNAPSHOT;
+    _SIM_DIRTY = false;
   }
   function clearSimAllLocal(){
     try{ localStorage.removeItem(simSlotsKey()); }catch{}

@@ -24,21 +24,21 @@ export default [
       },
     },
     rules: {
-      'no-unused-vars': ['warn', {
+      'no-unused-vars': ['error', {
         argsIgnorePattern: '^_',
         varsIgnorePattern: '^_',
         caughtErrorsIgnorePattern: '^_',
       }],
-      'no-empty': ['warn', { allowEmptyCatch: true }],
-      'no-constant-condition': 'warn',
+      'no-empty': ['error', { allowEmptyCatch: true }],
+      'no-constant-condition': 'error',
       // El código legacy entra primero como deuda visible (warning) para no bloquear el CI.
       // Los archivos nuevos de tests/configuración conservan la severidad estricta.
-      'no-undef': 'warn',
-      'no-dupe-keys': 'warn',
-      'no-fallthrough': 'warn',
-      'no-useless-escape': 'warn',
-      'no-useless-assignment': 'warn',
-      'no-extra-boolean-cast': 'warn',
+      'no-undef': 'error',
+      'no-dupe-keys': 'error',
+      'no-fallthrough': 'error',
+      'no-useless-escape': 'error',
+      'no-useless-assignment': 'error',
+      'no-extra-boolean-cast': 'error',
     },
   },
   {
@@ -58,12 +58,12 @@ export default [
       },
     },
     rules: {
-      'no-unused-vars': ['warn', {
+      'no-unused-vars': ['error', {
         argsIgnorePattern: '^_',
         varsIgnorePattern: '^_',
         caughtErrorsIgnorePattern: '^_',
       }],
-      'no-empty': ['warn', { allowEmptyCatch: true }],
+      'no-empty': ['error', { allowEmptyCatch: true }],
     },
   },
 ];
