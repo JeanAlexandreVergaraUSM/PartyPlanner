@@ -28,6 +28,3 @@ yarn-error.log*
 # Sistema operativo
 .DS_Store
 Thumbs.db
-# Documentación interna no publicada
-QUALITY_ASSURANCE.md
-SECURITY.md
